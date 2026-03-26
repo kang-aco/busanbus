@@ -42,93 +42,86 @@ async function startServer() {
   const BUSAN_API_BASE = "http://apis.data.go.kr/6260000/BusanBmsService";
 
   /**
-   * 공공데이터포털 API 호출 통합 헬퍼 (사용자 제안 반영 및 "Unexpected errors" 대응 강화)
-   * - 디코딩 키(Encoded 필요)와 인코딩 키(Raw 필요)의 모호함을 해결하기 위해 두 가지 전략을 모두 시도합니다.
-   * - 1차: encodeURIComponent 적용 (디코딩 키용)
-   * - 2차: 원문 그대로 (인코딩 키용)
+   * 공공데이터포털 API 호출 통합 헬퍼 (사용자 최종 제안 반영)
+   * - 사용자 제안에 따라 URL을 직접 조합하고 응답을 텍스트로 먼저 받아 처리합니다.
    */
   async function callBusApi(endpoint: string, params: any) {
-    // 사용자가 제공한 키를 가져옵니다.
-    const SERVICE_KEY = process.env.BUSAN_BUS_API_KEY || "UB2k8EMVzmIHj++X7CsOOB0xhew3KzZQcK+2djXsW+JIWzVxTRkErCFMI3ZwkV58bu+aAW3q974GzlqxNC6kxw==";
+    // 사용자가 제공한 인코딩된 키 원문 (특수문자 포함)
+    const SERVICE_KEY = process.env.BUSAN_BUS_API_KEY || "UB2k8EMVzmIHj%2B%2BX7CsOOB0xhew3KzZQcK%2B2djXsW%2BJIWzVxTRkErCFMI3ZwkV58bu%2BaAW3q974GzlqxNC6kxw%3D%3D";
     
     const baseUrl = `http://apis.data.go.kr/6260000/BusanBmsService/${endpoint}`;
+    
+    // 나머지 파라미터 구성
     const queryObj: any = { ...params, _type: 'json' };
-    const queryParams = new URLSearchParams(queryObj).toString();
+    const queryParams = Object.entries(queryObj)
+      .map(([key, val]) => `${key}=${encodeURIComponent(String(val))}`)
+      .join('&');
 
-    // 두 가지 전략을 순차적으로 시도합니다.
-    const strategies = [
-      { name: "Encoded (Decoding Key)", key: encodeURIComponent(SERVICE_KEY) },
-      { name: "Raw (Encoding Key)", key: SERVICE_KEY }
-    ];
+    // 최종 URL 조합: serviceKey는 원문 그대로(이미 인코딩된 상태일 수 있음) 주입
+    const fullUrl = `${baseUrl}?serviceKey=${SERVICE_KEY}&${queryParams}`;
+    
+    console.log(`[Bus API] Requesting: ${fullUrl}`);
 
-    let lastError = null;
+    try {
+      const response = await axios.get(fullUrl, { 
+        timeout: 15000,
+        headers: { 
+          'User-Agent': 'Mozilla/5.0',
+          'Referer': 'https://busanbus.pages.dev/'
+        },
+        // 공공데이터포털의 불안정한 형식을 처리하기 위해 응답을 텍스트로 먼저 받음
+        responseType: 'text',
+        validateStatus: () => true
+      });
+      
+      let rawData = response.data;
+      let data: any;
 
-    for (const strategy of strategies) {
-      const fullUrl = `${baseUrl}?serviceKey=${strategy.key}&${queryParams}`;
-      console.log(`[Bus API] Trying Strategy: ${strategy.name}`);
-
-      try {
-        const response = await axios.get(fullUrl, { 
-          timeout: 15000,
-          headers: { 
-            'User-Agent': 'Mozilla/5.0',
-            'Referer': 'https://busanbus.pages.dev/'
-          },
-          validateStatus: () => true
-        });
+      // 텍스트 데이터를 JSON 또는 XML로 파싱
+      if (typeof rawData === 'string') {
+        const trimmedData = rawData.trim();
         
-        let data = response.data;
-
-        // 응답이 문자열인 경우 (XML이거나 게이트웨이 에러 메시지)
-        if (typeof data === 'string') {
-          const rawBody = data.trim();
-          
-          // 게이트웨이 레벨의 인증 실패 확인
-          if (rawBody.includes("Unexpected errors") || 
-              rawBody.includes("SERVICE_KEY_IS_NOT_REGISTERED") || 
-              rawBody.includes("INVALID_REQUEST_PARAMETER_ERROR")) {
-            console.warn(`[Bus API] Strategy ${strategy.name} failed with gateway error: ${rawBody.substring(0, 50)}...`);
-            lastError = new Error("API_AUTH_ERROR");
-            (lastError as any).details = rawBody;
-            continue; // 다음 전략 시도
-          }
-
-          // XML 응답인 경우 JSON으로 변환
-          if (rawBody.includes('<response>') || rawBody.includes('<cmmMsgHeader>')) {
-            const parsed = parseXmlToJson(rawBody);
-            if (parsed) data = parsed;
+        // 1. JSON 시도
+        try {
+          data = JSON.parse(trimmedData);
+        } catch (e) {
+          // 2. XML 시도 (JSON 파싱 실패 시)
+          if (trimmedData.includes('<response>') || trimmedData.includes('<cmmMsgHeader>')) {
+            data = parseXmlToJson(trimmedData);
+          } else {
+            // 3. 게이트웨이 에러 메시지 확인
+            if (trimmedData.includes("Unexpected errors") || 
+                trimmedData.includes("SERVICE_KEY_IS_NOT_REGISTERED") || 
+                trimmedData.includes("INVALID_REQUEST_PARAMETER_ERROR")) {
+              const error = new Error("API_AUTH_ERROR");
+              (error as any).details = trimmedData;
+              throw error;
+            }
+            throw new Error(`알 수 없는 응답 형식: ${trimmedData.substring(0, 100)}`);
           }
         }
-
-        // API 비즈니스 로직 레벨의 에러 체크
-        const header = data?.response?.header || data?.header || data?.cmmMsgHeader;
-        if (header) {
-          const resultCode = String(header.resultCode || header.returnReasonCode || "");
-          // "00" 또는 "0"이 아니면 에러로 간주
-          if (resultCode !== "00" && resultCode !== "0" && resultCode !== "") {
-            console.warn(`[Bus API] Strategy ${strategy.name} returned business error: ${resultCode}`);
-            lastError = new Error("API_BUSINESS_ERROR");
-            (lastError as any).code = resultCode;
-            (lastError as any).details = header.resultMsg || header.returnAuthMsg || "알 수 없는 API 에러";
-            continue; // 다음 전략 시도 (가끔 키 문제로 비즈니스 에러가 나기도 함)
-          }
-        }
-        
-        if (!data) {
-          console.warn(`[Bus API] Strategy ${strategy.name} returned empty data.`);
-          continue;
-        }
-
-        console.log(`[Bus API] Strategy ${strategy.name} succeeded!`);
-        return data;
-      } catch (err: any) {
-        console.error(`[Bus API] Strategy ${strategy.name} network error: ${err.message}`);
-        lastError = err;
+      } else {
+        data = rawData;
       }
-    }
 
-    // 모든 전략이 실패한 경우 마지막 에러를 던짐
-    throw lastError || new Error("API_AUTH_ERROR");
+      // API 비즈니스 로직 레벨의 에러 체크
+      const header = data?.response?.header || data?.header || data?.cmmMsgHeader;
+      if (header) {
+        const resultCode = String(header.resultCode || header.returnReasonCode || "");
+        if (resultCode !== "00" && resultCode !== "0" && resultCode !== "") {
+          const error = new Error("API_BUSINESS_ERROR");
+          (error as any).code = resultCode;
+          (error as any).details = header.resultMsg || header.returnAuthMsg || "알 수 없는 API 에러";
+          throw error;
+        }
+      }
+      
+      if (!data) throw new Error("EMPTY_RESPONSE");
+      return data;
+    } catch (err: any) {
+      console.error(`[Bus API] Error: ${err.message}`);
+      throw err;
+    }
   }
 
 
