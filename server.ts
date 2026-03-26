@@ -43,22 +43,20 @@ async function startServer() {
 
   /**
    * 공공데이터포털 API 호출 통합 헬퍼 (사용자 최종 제안 반영)
-   * - 사용자 제안에 따라 URL을 직접 조합하고 응답을 텍스트로 먼저 받아 처리합니다.
+   * - 사용자 제안에 따라 URL을 직접 조합하고 응답을 처리합니다.
    */
   async function callBusApi(endpoint: string, params: any) {
-    // 사용자가 제공한 인코딩된 키 원문 (특수문자 포함)
+    // 사용자가 제공한 인코딩된 키 원문
     const SERVICE_KEY = process.env.BUSAN_BUS_API_KEY || "UB2k8EMVzmIHj%2B%2BX7CsOOB0xhew3KzZQcK%2B2djXsW%2BJIWzVxTRkErCFMI3ZwkV58bu%2BaAW3q974GzlqxNC6kxw%3D%3D";
     
-    const baseUrl = `http://apis.data.go.kr/6260000/BusanBmsService/${endpoint}`;
-    
-    // 나머지 파라미터 구성
+    // 나머지 파라미터 구성 (_type: json 포함)
     const queryObj: any = { ...params, _type: 'json' };
     const queryParams = Object.entries(queryObj)
       .map(([key, val]) => `${key}=${encodeURIComponent(String(val))}`)
       .join('&');
 
-    // 최종 URL 조합: serviceKey는 원문 그대로(이미 인코딩된 상태일 수 있음) 주입
-    const fullUrl = `${baseUrl}?serviceKey=${SERVICE_KEY}&${queryParams}`;
+    // 최종 URL 조합: serviceKey를 쿼리 스트링의 가장 앞에 배치
+    const fullUrl = `http://apis.data.go.kr/6260000/BusanBmsService/${endpoint}?serviceKey=${SERVICE_KEY}&${queryParams}`;
     
     console.log(`[Bus API] Requesting: ${fullUrl}`);
 
@@ -69,7 +67,7 @@ async function startServer() {
           'User-Agent': 'Mozilla/5.0',
           'Referer': 'https://busanbus.pages.dev/'
         },
-        // 공공데이터포털의 불안정한 형식을 처리하기 위해 응답을 텍스트로 먼저 받음
+        // 텍스트로 먼저 받아 처리 (불안정한 형식 대비)
         responseType: 'text',
         validateStatus: () => true
       });
@@ -77,34 +75,32 @@ async function startServer() {
       let rawData = response.data;
       let data: any;
 
-      // 텍스트 데이터를 JSON 또는 XML로 파싱
       if (typeof rawData === 'string') {
         const trimmedData = rawData.trim();
         
-        // 1. JSON 시도
+        // 1. JSON 파싱 시도
         try {
           data = JSON.parse(trimmedData);
         } catch (e) {
-          // 2. XML 시도 (JSON 파싱 실패 시)
+          // 2. XML 파싱 시도 (JSON 실패 시)
           if (trimmedData.includes('<response>') || trimmedData.includes('<cmmMsgHeader>')) {
             data = parseXmlToJson(trimmedData);
           } else {
-            // 3. 게이트웨이 에러 메시지 확인
+            // 게이트웨이 에러 메시지 확인
             if (trimmedData.includes("Unexpected errors") || 
-                trimmedData.includes("SERVICE_KEY_IS_NOT_REGISTERED") || 
-                trimmedData.includes("INVALID_REQUEST_PARAMETER_ERROR")) {
+                trimmedData.includes("SERVICE_KEY_IS_NOT_REGISTERED")) {
               const error = new Error("API_AUTH_ERROR");
               (error as any).details = trimmedData;
               throw error;
             }
-            throw new Error(`알 수 없는 응답 형식: ${trimmedData.substring(0, 100)}`);
+            throw new Error(`알 수 없는 응답: ${trimmedData.substring(0, 100)}`);
           }
         }
       } else {
         data = rawData;
       }
 
-      // API 비즈니스 로직 레벨의 에러 체크
+      // API 비즈니스 로직 에러 체크
       const header = data?.response?.header || data?.header || data?.cmmMsgHeader;
       if (header) {
         const resultCode = String(header.resultCode || header.returnReasonCode || "");
