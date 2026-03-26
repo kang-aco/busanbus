@@ -188,7 +188,8 @@ async function startServer() {
       const { stopId } = req.query;
       if (!stopId) return res.status(400).json({ error: "정류소 ID가 필요합니다." });
 
-      const data = await callBusApi('getBusStopArrive', { bstopid: stopId });
+      // 사용자 제안에 따라 getBusArrivalItem 엔드포인트와 stopId 파라미터를 사용합니다.
+      const data = await callBusApi('getBusArrivalItem', { stopId: stopId });
       res.json(data);
     } catch (error: any) {
       handleApiError(res, error, "도착 정보 조회 실패");
