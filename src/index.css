@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+@layer base {
+  .dark {
+    color-scheme: dark;
+  }
+}
