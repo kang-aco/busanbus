@@ -1,7 +1,7 @@
 {
-  "version": 1,
-  "include": [
-    "/api/*"
-  ],
-  "exclude": []
+  "name": "부산 버스 라이브 (Busan Bus Live)",
+  "description": "부산광역시 버스의 실시간 위치, 도착 시간, 혼잡도 및 경로 검색 기능을 제공합니다.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
 }
