@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
-    "build": "vite build && node -e \"const fs = require('fs'); const path = require('path'); if (!fs.existsSync('dist')) fs.mkdirSync('dist'); fs.copyFileSync('public/_routes.json', 'dist/_routes.json'); console.log('_routes.json copied to dist');\"",
+     "dev": "tsx server.ts",
+    "build": "vite build && cp _routes.json dist/_routes.json || copy _routes.json dist\\_routes.json",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
