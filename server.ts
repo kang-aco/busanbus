@@ -6,244 +6,463 @@ import axios from "axios";
 import dotenv from "dotenv";
 import { XMLParser } from "fast-xml-parser";
 
+import {
+  normalizeRoutes,
+  normalizeLocations,
+  normalizeArrivals,
+} from "./src/lib/bus-api/normalize";
+
 dotenv.config();
 
-const xmlParser = new XMLParser();
+const xmlParser = new XMLParser({
+  ignoreAttributes: false,
+  parseTagValue: true,
+  trimValues: true,
+});
 
 function parseXmlToJson(xmlData: string) {
   try {
-    const jsonObj = xmlParser.parse(xmlData);
-    // 공공데이터포털 XML 구조를 JSON 구조와 유사하게 반환
-    return jsonObj;
+    return xmlParser.parse(xmlData);
   } catch (e) {
     console.error("[XML Parse Error]:", e);
     return null;
   }
 }
 
+function getFirstQueryValue(value: unknown): string {
+  if (Array.isArray(value)) {
+    return String(value[0] ?? "").trim();
+  }
+  return String(value ?? "").trim();
+}
+
+function maskSecretInText(text: string, secret: string) {
+  if (!secret) return text;
+  return text.split(secret).join("***MASKED***");
+}
+
+function getHeader(data: any) {
+  return data?.response?.header || data?.header || data?.cmmMsgHeader || {};
+}
+
+function getResultCode(header: any) {
+  return String(header?.resultCode ?? header?.returnReasonCode ?? "").trim();
+}
+
+function getResultMessage(header: any) {
+  return String(header?.resultMsg ?? header?.returnAuthMsg ?? "").trim();
+}
+
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT || 3000);
 
   app.use(express.json());
 
-  // Health check endpoint
   app.get("/api/health", (req, res) => {
-    const configExists = fs.existsSync(path.join(process.cwd(), 'firebase-applet-config.json'));
-    res.json({ 
-      status: "ok", 
-      busKey: !!process.env.BUSAN_BUS_API_KEY,
+    const configExists = fs.existsSync(
+      path.join(process.cwd(), "firebase-applet-config.json")
+    );
+    const busKey = process.env.BUSAN_BUS_API_KEY || "";
+
+    res.json({
+      status: "ok",
+      busKey: !!busKey,
+      busKeyLength: busKey.length,
+      busKeyLooksEncoded: /%2B|%2F|%3D/i.test(busKey),
       mapsKey: !!process.env.GOOGLE_MAPS_API_KEY,
-      firebaseConfig: configExists
+      firebaseConfig: configExists,
+      nodeEnv: process.env.NODE_ENV || "development",
     });
   });
 
-  // Busan Bus API Proxy (Official Gateway)
-  const BUSAN_API_BASE = "http://apis.data.go.kr/6260000/BusanBmsService";
-
   /**
-   * 공공데이터포털 API 호출 통합 헬퍼 (사용자 최종 제안 반영)
-   * - 사용자 제안에 따라 URL을 직접 조합하고 응답을 처리합니다.
+   * 공공데이터포털 API 호출 공통 헬퍼
+   *
+   * 핵심 원칙:
+   * - BUSAN_BUS_API_KEY는 환경변수에 한 종류로만 넣습니다.
+   * - 여기서는 encodeURIComponent(serviceKey)를 절대 하지 않습니다.
+   * - URLSearchParams가 최종적으로 1회만 처리하게 둡니다.
    */
-  async function callBusApi(endpoint: string, params: any) {
-    // 사용자가 제공한 인코딩된 키 원문
-    const SERVICE_KEY = process.env.BUSAN_BUS_API_KEY || "UB2k8EMVzmIHj%2B%2BX7CsOOB0xhew3KzZQcK%2B2djXsW%2BJIWzVxTRkErCFMI3ZwkV58bu%2BaAW3q974GzlqxNC6kxw%3D%3D";
-    
-    // 나머지 파라미터 구성 (_type: json 포함)
-    const queryObj: any = { ...params, _type: 'json' };
-    const queryParams = Object.entries(queryObj)
-      .map(([key, val]) => `${key}=${encodeURIComponent(String(val))}`)
-      .join('&');
+  async function callBusApi(
+    endpoint: string,
+    params: Record<string, unknown>,
+    service: string = "BusanBIMS"
+  ) {
+    const serviceKey = process.env.BUSAN_BUS_API_KEY || "";
 
-    // 최종 URL 조합: serviceKey를 쿼리 스트링의 가장 앞에 배치
-    const fullUrl = `http://apis.data.go.kr/6260000/BusanBmsService/${endpoint}?serviceKey=${SERVICE_KEY}&${queryParams}`;
-    
-    console.log(`[Bus API] Requesting: ${fullUrl}`);
+    if (!serviceKey) {
+      const error = new Error("MISSING_SERVICE_KEY");
+      throw error;
+    }
+
+    const url = new URL(`https://apis.data.go.kr/6260000/${service}/${endpoint}`);
+    url.searchParams.set("serviceKey", serviceKey);
+    url.searchParams.set("_type", "json");
+
+    for (const [key, value] of Object.entries(params)) {
+      if (value === undefined || value === null) continue;
+
+      const normalizedValue = Array.isArray(value)
+        ? String(value[0] ?? "").trim()
+        : String(value).trim();
+
+      if (!normalizedValue) continue;
+      url.searchParams.set(key, normalizedValue);
+    }
+
+    const safeUrlForLog = maskSecretInText(url.toString(), serviceKey);
+    console.log(`[Bus API] Requesting (${service}): ${safeUrlForLog}`);
 
     try {
-      const response = await axios.get(fullUrl, { 
+      const response = await axios.get(url.toString(), {
         timeout: 15000,
-        headers: { 
-          'User-Agent': 'Mozilla/5.0',
-          'Referer': 'https://busanbus.pages.dev/'
+        headers: {
+          Accept: "application/json, text/plain, */*",
+          "User-Agent": "Mozilla/5.0",
+          Referer: "https://busanbus.pages.dev/",
         },
-        // 텍스트로 먼저 받아 처리 (불안정한 형식 대비)
-        responseType: 'text',
-        validateStatus: () => true
+        responseType: "text",
+        validateStatus: () => true,
       });
-      
-      let rawData = response.data;
-      let data: any;
 
-      if (typeof rawData === 'string') {
-        const trimmedData = rawData.trim();
-        
-        // 1. JSON 파싱 시도
+      const rawData = response.data;
+      const trimmedData =
+        typeof rawData === "string" ? rawData.trim() : rawData;
+
+      console.log(`[Bus API] HTTP ${response.status} / ${endpoint}`);
+
+      if (typeof trimmedData === "string") {
+        console.log(
+          `[Bus API] Raw Response: ${maskSecretInText(
+            trimmedData.substring(0, 700),
+            serviceKey
+          )}`
+        );
+      }
+
+      let data: any = null;
+
+      if (typeof trimmedData === "string") {
         try {
           data = JSON.parse(trimmedData);
-        } catch (e) {
-          // 2. XML 파싱 시도 (JSON 실패 시)
-          if (trimmedData.includes('<response>') || trimmedData.includes('<cmmMsgHeader>')) {
+        } catch {
+          if (
+            trimmedData.includes("<response>") ||
+            trimmedData.includes("<cmmMsgHeader>") ||
+            trimmedData.includes("<?xml")
+          ) {
             data = parseXmlToJson(trimmedData);
           } else {
-            // 게이트웨이 에러 메시지 확인
-            if (trimmedData.includes("Unexpected errors") || 
-                trimmedData.includes("SERVICE_KEY_IS_NOT_REGISTERED")) {
+            if (
+              trimmedData.includes("Unexpected errors") ||
+              trimmedData.includes("SERVICE KEY IS NOT REGISTERED") ||
+              trimmedData.includes("SERVICE_KEY_IS_NOT_REGISTERED")
+            ) {
               const error = new Error("API_AUTH_ERROR");
               (error as any).details = trimmedData;
               throw error;
             }
-            throw new Error(`알 수 없는 응답: ${trimmedData.substring(0, 100)}`);
+
+            const error = new Error("UNKNOWN_API_RESPONSE");
+            (error as any).details = trimmedData.substring(0, 500);
+            throw error;
           }
         }
       } else {
-        data = rawData;
+        data = trimmedData;
       }
 
-      // API 비즈니스 로직 에러 체크
-      const header = data?.response?.header || data?.header || data?.cmmMsgHeader;
-      if (header) {
-        const resultCode = String(header.resultCode || header.returnReasonCode || "");
-        if (resultCode !== "00" && resultCode !== "0" && resultCode !== "") {
-          const error = new Error("API_BUSINESS_ERROR");
-          (error as any).code = resultCode;
-          (error as any).details = header.resultMsg || header.returnAuthMsg || "알 수 없는 API 에러";
-          throw error;
-        }
+      if (!data) {
+        const error = new Error("EMPTY_RESPONSE");
+        throw error;
       }
-      
-      if (!data) throw new Error("EMPTY_RESPONSE");
+
+      const header = getHeader(data);
+      const resultCode = getResultCode(header);
+      const resultMsg = getResultMessage(header);
+
+      if (response.status >= 400) {
+        const error = new Error("API_HTTP_ERROR");
+        (error as any).code = String(response.status);
+        (error as any).details = resultMsg || JSON.stringify(data).substring(0, 500);
+        throw error;
+      }
+
+      if (resultCode && resultCode !== "00" && resultCode !== "0") {
+        const error = new Error("API_BUSINESS_ERROR");
+        (error as any).code = resultCode;
+        (error as any).details = resultMsg || "알 수 없는 API 에러";
+        throw error;
+      }
+
+      console.log(
+        `[Bus API] Parsed Response for ${endpoint}:`,
+        maskSecretInText(JSON.stringify(data).substring(0, 700), serviceKey)
+      );
+
       return data;
     } catch (err: any) {
-      console.error(`[Bus API] Error: ${err.message}`);
+      console.error(
+        `[Bus API] Error (${endpoint}):`,
+        err?.message,
+        err?.details || ""
+      );
       throw err;
     }
   }
 
+  function handleApiError(
+    res: express.Response,
+    error: any,
+    defaultMessage: string
+  ) {
+    console.error(
+      `[API Error] ${defaultMessage}:`,
+      error?.message,
+      error?.details || ""
+    );
 
-  /**
-   * API 에러 응답을 처리하는 헬퍼 함수
-   */
-  function handleApiError(res: express.Response, error: any, defaultMessage: string) {
-    console.error(`[API Error] ${defaultMessage}:`, error.message, error.details || "");
-    
-    if (error.message === "API_AUTH_ERROR") {
-      const isUnexpected = error.details && error.details.includes("Unexpected errors");
-      return res.status(401).json({
-        error: isUnexpected ? "API 인증 실패 (Unexpected errors)" : "API 인증 실패",
-        details: isUnexpected 
-          ? "공공데이터포털에서 'Unexpected errors'가 발생했습니다. 이는 주로 API 키의 특수문자(+, / 등) 처리 문제일 가능성이 높습니다."
-          : "API 키가 유효하지 않거나 만료되었을 수 있습니다. .env 파일(또는 Secrets)과 공공데이터포털 설정을 확인해 주세요.",
-        suggestion: isUnexpected 
-          ? "디코딩 키를 사용 중이라면 서버 코드에서 encodeURIComponent 처리가 필요하며, 인코딩 키를 사용 중이라면 원문 그대로 사용해야 합니다. 현재 서버는 키를 인코딩하여 보내고 있습니다."
-          : "키 발급 후 동기화까지 최대 24시간이 소요될 수 있습니다.",
-        apiDetails: error.details
+    if (error?.message === "MISSING_SERVICE_KEY") {
+      return res.status(500).json({
+        error: "서버 설정 오류",
+        details: "BUSAN_BUS_API_KEY가 설정되지 않았습니다.",
       });
     }
 
-    res.status(500).json({ 
-      error: defaultMessage, 
-      details: error.message,
-      apiDetails: error.details
+    if (error?.message === "API_AUTH_ERROR") {
+      const details =
+        typeof error?.details === "string" ? error.details : "";
+      const isUnexpected = details.includes("Unexpected errors");
+
+      return res.status(401).json({
+        error: isUnexpected ? "API 인증 실패 (Unexpected errors)" : "API 인증 실패",
+        details: isUnexpected
+          ? "공공데이터포털 인증 과정에서 'Unexpected errors'가 발생했습니다. serviceKey 전달 방식 또는 키 종류 불일치 가능성이 큽니다."
+          : "API 키가 유효하지 않거나 등록되지 않았을 수 있습니다.",
+        suggestion:
+          "환경변수의 BUSAN_BUS_API_KEY 값을 한 종류로 통일하고, 서버에서는 encodeURIComponent(serviceKey) 없이 URLSearchParams.set('serviceKey', key)만 사용하세요.",
+        apiDetails: error?.details,
+      });
+    }
+
+    if (error?.message === "API_HTTP_ERROR") {
+      return res.status(502).json({
+        error: defaultMessage,
+        details: `공공데이터 HTTP 오류: ${error?.code || "unknown"}`,
+        apiDetails: error?.details,
+      });
+    }
+
+    if (error?.message === "API_BUSINESS_ERROR") {
+      return res.status(502).json({
+        error: defaultMessage,
+        code: error?.code,
+        details: error?.details,
+      });
+    }
+
+    if (error?.message === "UNKNOWN_API_RESPONSE") {
+      return res.status(502).json({
+        error: defaultMessage,
+        details: "공공데이터 응답 형식을 해석하지 못했습니다.",
+        apiDetails: error?.details,
+      });
+    }
+
+    if (error?.message === "EMPTY_RESPONSE") {
+      return res.status(502).json({
+        error: defaultMessage,
+        details: "공공데이터 응답이 비어 있습니다.",
+      });
+    }
+
+    return res.status(500).json({
+      error: defaultMessage,
+      details: error?.message || "알 수 없는 오류",
+      apiDetails: error?.details,
     });
   }
 
   app.get("/api/bus/route-list", async (req, res) => {
     try {
-      const { lineNo } = req.query;
-      if (!lineNo) return res.status(400).json({ error: "노선 번호가 필요합니다." });
+      const lineNo = getFirstQueryValue(req.query.lineNo);
 
-      const data = await callBusApi('getBusRouteList', { lineNo });
-      res.json(data);
+      if (!lineNo) {
+        return res.status(400).json({ error: "노선 번호가 필요합니다." });
+      }
+
+      const data = await callBusApi(
+        "getBusRouteList",
+        { lineNo },
+        "BusanBmsService"
+      );
+
+      const routes = normalizeRoutes(data);
+      return res.json({ routes });
     } catch (error: any) {
-      handleApiError(res, error, "노선 목록 조회 실패");
+      return handleApiError(res, error, "노선 목록 조회 실패");
     }
   });
 
   app.get("/api/bus/location", async (req, res) => {
     try {
-      const { lineId } = req.query;
-      if (!lineId) return res.status(400).json({ error: "노선 ID가 필요합니다." });
+      const lineId = getFirstQueryValue(req.query.lineId);
 
-      const data = await callBusApi('getBusRouteLocation', { lineid: lineId });
-      res.json(data);
+      if (!lineId) {
+        return res.status(400).json({ error: "노선 ID가 필요합니다." });
+      }
+
+      const data = await callBusApi("busInfoByRouteId", { lineid: lineId });
+      const locations = normalizeLocations(data);
+
+      return res.json({ locations });
     } catch (error: any) {
-      handleApiError(res, error, "위치 정보 조회 실패");
+      return handleApiError(res, error, "위치 정보 조회 실패");
     }
   });
 
   app.get("/api/bus/arrival", async (req, res) => {
     try {
-      const { stopId } = req.query;
-      if (!stopId) return res.status(400).json({ error: "정류소 ID가 필요합니다." });
+      const stopId = getFirstQueryValue(req.query.stopId);
 
-      // 사용자 제안에 따라 getBusArrivalItem 엔드포인트와 stopId 파라미터를 사용합니다.
-      const data = await callBusApi('getBusArrivalItem', { stopId: stopId });
-      res.json(data);
+      if (!stopId) {
+        return res.status(400).json({ error: "정류소 ID가 필요합니다." });
+      }
+
+      const data = await callBusApi("stopArrByBstopid", { bstopid: stopId });
+      const arrivals = normalizeArrivals(data);
+
+      return res.json({ arrivals });
     } catch (error: any) {
-      handleApiError(res, error, "도착 정보 조회 실패");
+      return handleApiError(res, error, "도착 정보 조회 실패");
     }
   });
 
-  // Google Maps API Key Proxy
+  app.get("/api/bus/debug", async (req, res) => {
+    try {
+      const endpoint = getFirstQueryValue(req.query.endpoint);
+
+      if (!endpoint) {
+        return res.status(400).json({
+          error: "endpoint 파라미터가 필요합니다.",
+        });
+      }
+
+      const service = getFirstQueryValue(req.query.service) || "BusanBIMS";
+
+      const params: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(req.query)) {
+        if (key === "endpoint" || key === "service") continue;
+        params[key] = value;
+      }
+
+      const data = await callBusApi(endpoint, params, service);
+
+      return res.json({
+        _debug: true,
+        _endpoint: endpoint,
+        _service: service,
+        _params: params,
+        _responseKeys: Object.keys(data || {}),
+        _fullResponse: data,
+      });
+    } catch (error: any) {
+      return res.status(500).json({
+        error: error?.message || "디버그 호출 실패",
+        details: error?.details,
+      });
+    }
+  });
+
   app.get("/api/maps-key", (req, res) => {
     const MAPS_KEY = process.env.GOOGLE_MAPS_API_KEY;
+
     if (!MAPS_KEY) {
-      return res.status(500).json({ error: "Google Maps API 키가 설정되지 않았습니다." });
+      return res.status(500).json({
+        error: "Google Maps API 키가 설정되지 않았습니다.",
+      });
     }
-    res.json({ key: MAPS_KEY });
+
+    return res.json({ key: MAPS_KEY });
   });
 
-  // Google Maps Directions Proxy
   app.get("/api/directions", async (req, res) => {
     const MAPS_KEY = process.env.GOOGLE_MAPS_API_KEY;
+
     if (!MAPS_KEY) {
-      return res.status(500).json({ 
-        error: "Google Maps API 키가 설정되지 않았습니다.", 
-        details: "Secrets에서 GOOGLE_MAPS_API_KEY를 설정해 주세요. (Directions API 활성화 필요)" 
+      return res.status(500).json({
+        error: "Google Maps API 키가 설정되지 않았습니다.",
+        details:
+          "Secrets 또는 .env에서 GOOGLE_MAPS_API_KEY를 설정해 주세요. Directions API 활성화도 필요합니다.",
       });
     }
 
     try {
-      let { origin, destination } = req.query as { origin: string, destination: string };
-      
-      // 부산이 포함되어 있지 않으면 자동으로 추가
+      let origin = getFirstQueryValue(req.query.origin);
+      let destination = getFirstQueryValue(req.query.destination);
+
+      if (!origin || !destination) {
+        return res.status(400).json({
+          error: "origin과 destination 파라미터가 필요합니다.",
+        });
+      }
+
       if (!origin.includes("부산")) origin = `부산 ${origin}`;
       if (!destination.includes("부산")) destination = `부산 ${destination}`;
 
-      console.log(`Searching route: ${origin} -> ${destination}`);
-      const response = await axios.get("https://maps.googleapis.com/maps/api/directions/json", {
-        params: {
-          origin,
-          destination,
-          mode: "transit",
-          transit_mode: "bus|subway",
-          key: MAPS_KEY,
-          language: "ko",
-          region: "kr"
-        },
-      });
-      res.json(response.data);
+      console.log(`[Directions] Searching route: ${origin} -> ${destination}`);
+
+      const response = await axios.get(
+        "https://maps.googleapis.com/maps/api/directions/json",
+        {
+          params: {
+            origin,
+            destination,
+            mode: "transit",
+            transit_mode: "bus|subway",
+            key: MAPS_KEY,
+            language: "ko",
+            region: "kr",
+          },
+          timeout: 15000,
+        }
+      );
+
+      return res.json(response.data);
     } catch (error: any) {
-      console.error("Directions Error:", error.response?.data || error.message);
-      res.status(500).json({ error: "경로를 찾을 수 없습니다.", details: error.message });
+      console.error(
+        "[Directions Error]:",
+        error?.response?.data || error?.message
+      );
+
+      return res.status(500).json({
+        error: "경로를 찾을 수 없습니다.",
+        details:
+          error?.response?.data?.error_message ||
+          error?.message ||
+          "알 수 없는 오류",
+      });
     }
   });
 
-  // Catch-all for undefined API routes to prevent Vite fallback (HTML)
   app.all("/api/*", (req, res) => {
-    res.status(404).json({ error: "API 엔드포인트를 찾을 수 없습니다.", path: req.path });
+    res.status(404).json({
+      error: "API 엔드포인트를 찾을 수 없습니다.",
+      path: req.path,
+    });
   });
 
-  // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
+
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
+
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
@@ -255,4 +474,7 @@ async function startServer() {
   });
 }
 
-startServer();
+startServer().catch((error) => {
+  console.error("[Server Startup Error]:", error);
+  process.exit(1);
+});
