@@ -12,7 +12,6 @@ export default defineConfig(({mode}) => {
       {
         name: 'copy-routes-json',
         closeBundle() {
-          // _routes.json을 dist로 복사
           const fs = require('fs');
           const sourcePath = '_routes.json';
           const destPath = 'dist/_routes.json';
@@ -43,17 +42,3 @@ export default defineConfig(({mode}) => {
     },
   };
 });
-```
-
----
-
-## ✅ 확인: 프로젝트 루트에 _routes.json이 있는지
-
-Google AI Studio 파일 트리에서:
-```
-프로젝트루트/
-├── _routes.json    ← 이 파일이 있어야 함!
-├── functions/
-├── src/
-├── package.json
-└── vite.config.ts
