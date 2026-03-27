@@ -4,54 +4,50 @@ import path from "path";
 import fs from "fs";
 import axios from "axios";
 import dotenv from "dotenv";
-import { XMLParser } from "fast-xml-parser";
 
 import {
   normalizeRoutes,
   normalizeLocations,
   normalizeArrivals,
 } from "./src/lib/bus-api/normalize";
+import { callBusApi, handleApiError, getFirstQueryValue } from "./functions/busApi";
+import { onRequest as handleHealth } from "./functions/api/health";
+import { onRequest as handleMapsKey } from "./functions/api/maps-key";
+import { onRequest as handleRouteList } from "./functions/api/bus/route-list";
+import { onRequest as handleLocation } from "./functions/api/bus/location";
+import { onRequest as handleArrival } from "./functions/api/bus/arrival";
 
 dotenv.config();
 
-const xmlParser = new XMLParser({
-  ignoreAttributes: false,
-  parseTagValue: true,
-  trimValues: true,
-});
-
-function parseXmlToJson(xmlData: string) {
+/**
+ * Cloudflare Pages style onRequest 함수를 Express 핸들러로 변환하는 어댑터
+ */
+const adaptOnRequest = (handler: any) => async (req: express.Request, res: express.Response) => {
   try {
-    return xmlParser.parse(xmlData);
-  } catch (e) {
-    console.error("[XML Parse Error]:", e);
-    return null;
+    const protocol = req.protocol;
+    const host = req.get("host");
+    const fullUrl = `${protocol}://${host}${req.originalUrl}`;
+
+    const context = {
+      request: {
+        url: fullUrl,
+        headers: req.headers,
+        method: req.method,
+      },
+      env: process.env,
+    };
+
+    const response = await handler(context);
+    const data = await response.json();
+    res.status(response.status || 200).json(data);
+  } catch (error: any) {
+    console.error("[Adapter Error]:", error);
+    res.status(500).json({
+      error: "Internal Server Error",
+      details: error.message,
+    });
   }
-}
-
-function getFirstQueryValue(value: unknown): string {
-  if (Array.isArray(value)) {
-    return String(value[0] ?? "").trim();
-  }
-  return String(value ?? "").trim();
-}
-
-function maskSecretInText(text: string, secret: string) {
-  if (!secret) return text;
-  return text.split(secret).join("***MASKED***");
-}
-
-function getHeader(data: any) {
-  return data?.response?.header || data?.header || data?.cmmMsgHeader || {};
-}
-
-function getResultCode(header: any) {
-  return String(header?.resultCode ?? header?.returnReasonCode ?? "").trim();
-}
-
-function getResultMessage(header: any) {
-  return String(header?.resultMsg ?? header?.returnAuthMsg ?? "").trim();
-}
+};
 
 async function startServer() {
   const app = express();
@@ -63,91 +59,13 @@ async function startServer() {
   // 🔥 중요: API 라우트를 가장 먼저 정의 (정적 파일보다 우선)
   // ===================================================================
 
-  app.get("/api/health", (req, res) => {
-    const configExists = fs.existsSync(
-      path.join(process.cwd(), "firebase-applet-config.json")
-    );
-    const busKey = process.env.BUSAN_BUS_API_KEY || "";
+  app.get("/api/health", adaptOnRequest(handleHealth));
 
-    res.json({
-      status: "ok",
-      busKey: !!busKey,
-      busKeyLength: busKey.length,
-      busKeyFirst10: busKey ? busKey.substring(0, 10) + "..." : "N/A",
-      busKeyHasPlus: busKey.includes('+'),
-      busKeyHasSlash: busKey.includes('/'),
-      busKeyHasEquals: busKey.includes('='),
-      mapsKey: !!process.env.GOOGLE_MAPS_API_KEY,
-      mapsKeyLength: (process.env.GOOGLE_MAPS_API_KEY || "").length,
-      firebaseConfig: configExists,
-      nodeEnv: process.env.NODE_ENV || "development",
-      geminiKey: !!process.env.GEMINI_API_KEY,
-      appUrl: process.env.APP_URL || "N/A",
-    });
-  });
+  app.get("/api/bus/route-list", adaptOnRequest(handleRouteList));
 
-  app.get("/api/bus/route-list", async (req, res) => {
-    try {
-      const lineNo = getFirstQueryValue(req.query.lineNo);
+  app.get("/api/bus/location", adaptOnRequest(handleLocation));
 
-      if (!lineNo) {
-        return res.status(400).json({ error: "노선 번호가 필요합니다." });
-      }
-
-      const data = await callBusApi(
-        "getBusRouteList",
-        { lineNo },
-        "BusanBmsService"
-      );
-
-      const routes = normalizeRoutes(data);
-      return res.json({ routes });
-    } catch (error: any) {
-      return handleApiError(res, error, "노선 목록 조회 실패");
-    }
-  });
-
-  app.get("/api/bus/location", async (req, res) => {
-    try {
-      const lineId = getFirstQueryValue(req.query.lineId);
-
-      if (!lineId) {
-        return res.status(400).json({ error: "노선 ID가 필요합니다." });
-      }
-
-      const data = await callBusApi(
-        "busInfoByRouteId",
-        { lineid: lineId },
-        "BusanBmsService"
-      );
-
-      const locations = normalizeLocations(data);
-      return res.json({ locations });
-    } catch (error: any) {
-      return handleApiError(res, error, "위치 정보 조회 실패");
-    }
-  });
-
-  app.get("/api/bus/arrival", async (req, res) => {
-    try {
-      const stopId = getFirstQueryValue(req.query.stopId);
-
-      if (!stopId) {
-        return res.status(400).json({ error: "정류소 ID가 필요합니다." });
-      }
-
-      const data = await callBusApi(
-        "stopArrByBstopid",
-        { bstopid: stopId },
-        "BusanBmsService"
-      );
-
-      const arrivals = normalizeArrivals(data);
-      return res.json({ arrivals });
-    } catch (error: any) {
-      return handleApiError(res, error, "도착 정보 조회 실패");
-    }
-  });
+  app.get("/api/bus/arrival", adaptOnRequest(handleArrival));
 
   app.get("/api/bus/debug", async (req, res) => {
     try {
@@ -186,17 +104,7 @@ async function startServer() {
     }
   });
 
-  app.get("/api/maps-key", (req, res) => {
-    const MAPS_KEY = process.env.GOOGLE_MAPS_API_KEY;
-
-    if (!MAPS_KEY) {
-      return res.status(500).json({
-        error: "Google Maps API 키가 설정되지 않았습니다.",
-      });
-    }
-
-    return res.json({ key: MAPS_KEY });
-  });
+  app.get("/api/maps-key", adaptOnRequest(handleMapsKey));
 
   app.get("/api/directions", async (req, res) => {
     const MAPS_KEY = process.env.GOOGLE_MAPS_API_KEY;

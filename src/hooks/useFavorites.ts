@@ -5,6 +5,7 @@ const FAVORITES_KEY = "busanBusFavorites";
 
 export function useFavorites() {
   const [favorites, setFavorites] = useState<BusRoute[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const stored = localStorage.getItem(FAVORITES_KEY);
@@ -15,6 +16,7 @@ export function useFavorites() {
         console.error("Failed to parse favorites", e);
       }
     }
+    setLoading(false);
   }, []);
 
   const saveFavorites = (newFavorites: BusRoute[]) => {
@@ -47,6 +49,7 @@ export function useFavorites() {
 
   return {
     favorites,
+    loading,
     addFavorite,
     removeFavorite,
     isFavorite,
