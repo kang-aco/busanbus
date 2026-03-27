@@ -67,12 +67,18 @@ async function startServer() {
 
     res.json({
       status: "ok",
-      busKey: !!busKey,
-      busKeyLength: busKey.length,
-      busKeyLooksEncoded: /%2B|%2F|%3D/i.test(busKey),
-      mapsKey: !!process.env.GOOGLE_MAPS_API_KEY,
-      firebaseConfig: configExists,
-      nodeEnv: process.env.NODE_ENV || "development",
+    busKey: !!busKey,
+    busKeyLength: busKey.length,
+    busKeyFirst10: busKey ? busKey.substring(0, 10) + "..." : "N/A",
+    busKeyHasPlus: busKey.includes('+'),
+    busKeyHasSlash: busKey.includes('/'),
+    busKeyHasEquals: busKey.includes('='),
+    mapsKey: !!process.env.GOOGLE_MAPS_API_KEY,
+    mapsKeyLength: (process.env.GOOGLE_MAPS_API_KEY || "").length,
+    firebaseConfig: configExists,
+    nodeEnv: process.env.NODE_ENV || "development",
+    geminiKey: !!process.env.GEMINI_API_KEY,
+    appUrl: process.env.APP_URL || "N/A",
     });
   });
 
@@ -87,7 +93,7 @@ async function startServer() {
   async function callBusApi(
     endpoint: string,
     params: Record<string, unknown>,
-    service: string = "BusanBIMS"
+    service: string = "BusanBmsService"
   ) {
     const serviceKey = process.env.BUSAN_BUS_API_KEY || "";
 
@@ -185,7 +191,8 @@ async function startServer() {
       if (response.status >= 400) {
         const error = new Error("API_HTTP_ERROR");
         (error as any).code = String(response.status);
-        (error as any).details = resultMsg || JSON.stringify(data).substring(0, 500);
+        (error as any).details =
+          resultMsg || JSON.stringify(data).substring(0, 500);
         throw error;
       }
 
@@ -238,10 +245,10 @@ async function startServer() {
       return res.status(401).json({
         error: isUnexpected ? "API 인증 실패 (Unexpected errors)" : "API 인증 실패",
         details: isUnexpected
-          ? "공공데이터포털 인증 과정에서 'Unexpected errors'가 발생했습니다. serviceKey 전달 방식 또는 키 종류 불일치 가능성이 큽니다."
+          ? "공공데이터포털 인증 과정에서 'Unexpected errors'가 발생했습니다. serviceKey 전달 방식 문제보다는 서비스명, 엔드포인트, 활용신청 승인 상태를 먼저 확인해야 합니다."
           : "API 키가 유효하지 않거나 등록되지 않았을 수 있습니다.",
         suggestion:
-          "환경변수의 BUSAN_BUS_API_KEY 값을 한 종류로 통일하고, 서버에서는 encodeURIComponent(serviceKey) 없이 URLSearchParams.set('serviceKey', key)만 사용하세요.",
+          "BusanBmsService 기준으로 서비스명을 통일하고, data.go.kr에서 해당 API 활용신청이 승인 완료인지 확인하세요.",
         apiDetails: error?.details,
       });
     }
@@ -313,9 +320,13 @@ async function startServer() {
         return res.status(400).json({ error: "노선 ID가 필요합니다." });
       }
 
-      const data = await callBusApi("busInfoByRouteId", { lineid: lineId });
-      const locations = normalizeLocations(data);
+      const data = await callBusApi(
+        "busInfoByRouteId",
+        { lineid: lineId },
+        "BusanBmsService"
+      );
 
+      const locations = normalizeLocations(data);
       return res.json({ locations });
     } catch (error: any) {
       return handleApiError(res, error, "위치 정보 조회 실패");
@@ -330,9 +341,13 @@ async function startServer() {
         return res.status(400).json({ error: "정류소 ID가 필요합니다." });
       }
 
-      const data = await callBusApi("stopArrByBstopid", { bstopid: stopId });
-      const arrivals = normalizeArrivals(data);
+      const data = await callBusApi(
+        "stopArrByBstopid",
+        { bstopid: stopId },
+        "BusanBmsService"
+      );
 
+      const arrivals = normalizeArrivals(data);
       return res.json({ arrivals });
     } catch (error: any) {
       return handleApiError(res, error, "도착 정보 조회 실패");
@@ -349,7 +364,8 @@ async function startServer() {
         });
       }
 
-      const service = getFirstQueryValue(req.query.service) || "BusanBIMS";
+      const service =
+        getFirstQueryValue(req.query.service) || "BusanBmsService";
 
       const params: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(req.query)) {
