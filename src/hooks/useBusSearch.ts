@@ -1,14 +1,8 @@
 import { useState } from "react";
-
-interface Route {
-  lineId: string;
-  lineNo: string;
-  busType: string;
-  companyId: string;
-}
+import type { BusRoute } from "@/lib/bus-api/types";
 
 export function useBusSearch() {
-  const [routes, setRoutes] = useState<Route[]>([]);
+  const [routes, setRoutes] = useState<BusRoute[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

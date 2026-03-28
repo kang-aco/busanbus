@@ -1,5 +1,7 @@
+"use client";
+
 import { Search, MapPin, Loader2 } from "lucide-react";
-import { useState } from "react";
+import React, { useState } from "react";
 
 interface Stop {
   stopId: string;
@@ -29,14 +31,13 @@ export default function StopSearchPanel({ onStopSelect }: StopSearchPanelProps) 
       const response = await fetch(`/api/bus/stops?stopName=${encodeURIComponent(searchQuery)}`);
       const data = await response.json();
 
-      if (data.error) {
-        setError(data.error);
-        setStops([]);
-      } else {
-        setStops(data.stops || []);
-        if (!data.stops || data.stops.length === 0) {
-          setError("검색 결과가 없습니다.");
-        }
+      if (!response.ok) {
+        throw new Error(data.error || data.details || `API Error: ${response.status}`);
+      }
+
+      setStops(data.stops || []);
+      if (!data.stops || data.stops.length === 0) {
+        setError("검색 결과가 없습니다.");
       }
     } catch (err: any) {
       setError("검색 실패: " + err.message);

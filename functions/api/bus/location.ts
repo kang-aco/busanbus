@@ -17,9 +17,9 @@ export async function onRequest(context: any) {
   }
 
   try {
-    // ✅ busInfoByRouteId - 정류장 목록 + 실시간 버스 위치
+    // ✅ getBusLocationList - 노선별 실시간 버스 위치 목록 조회
     const apiUrl = new URL(
-      "https://apis.data.go.kr/6260000/BusanBIMS/busInfoByRouteId"
+      "https://apis.data.go.kr/6260000/BusanBIMS/getBusLocationList"
     );
     apiUrl.searchParams.set("serviceKey", serviceKey);
     apiUrl.searchParams.set("lineid", lineId);
@@ -31,6 +31,11 @@ export async function onRequest(context: any) {
     const resultCode = resultCodeMatch ? resultCodeMatch[1].trim() : "";
     
     if (resultCode !== "00") {
+      // 결과가 없는 경우 (운행 중인 버스 없음) 00이 아닐 수 있음
+      if (resultCode === "01" || rawData.includes("결과가 없습니다")) {
+        return Response.json({ locations: [] });
+      }
+
       const resultMsgMatch = rawData.match(/<resultMsg>\s*(.+?)\s*<\/resultMsg>/);
       const resultMsg = resultMsgMatch ? resultMsgMatch[1].trim() : "Unknown error";
       return Response.json(
@@ -52,29 +57,24 @@ export async function onRequest(context: any) {
           return match ? match[1].trim() : "";
         };
 
-        const nodeId = getTag("nodeid");
-        const plateNo = getTag("carno");
-        const lineIdVal = getTag("lineid");
-        const gpsX = getTag("lat");  // ✅ lat (위도)
-        const gpsY = getTag("lin");  // ✅ lin (경도)
+        const gpsX = getTag("gpsX"); // 경도 (Longitude)
+        const gpsY = getTag("gpsY"); // 위도 (Latitude)
+        const vehId = getTag("vehId");
+        const plateNo = getTag("plateNo");
+        const nodeId = getTag("nodeId");
 
-        // GPS 좌표가 있는 것만 반환 (실제 버스 위치)
-        if (!gpsX || !gpsY) {
-          return null;
-        }
+        if (!gpsX || !gpsY) return null;
 
         return {
-          vehId: `${lineIdVal}-${nodeId}-${plateNo}`,
-          lineId: lineIdVal,
-          lineNo: getTag("lineno"),
+          vehId: vehId || `${lineId}-${nodeId}-${plateNo}`,
+          lineId,
           nodeId,
-          nodeNm: getTag("bstopnm"),  // ✅ 정류장명
-          gpsX,
-          gpsY,
+          gpsX, // Longitude
+          gpsY, // Latitude
           plateNo,
         };
       })
-      .filter((loc) => loc !== null); // null 제거
+      .filter((loc) => loc !== null);
 
     return Response.json({ locations });
   } catch (error: any) {

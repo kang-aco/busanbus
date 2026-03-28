@@ -1,17 +1,13 @@
-import { Search, Loader2 } from "lucide-react";
-import { useState } from "react";
+"use client";
 
-interface Route {
-  lineId: string;
-  lineNo: string;
-  busType: string;
-  companyId: string;
-}
+import { Search, Loader2 } from "lucide-react";
+import React, { useState } from "react";
+import type { BusRoute } from "@/lib/bus-api/types";
 
 interface BusSearchPanelProps {
   onSearch: (lineNo: string) => void;
-  onRouteSelect: (route: Route) => void;
-  routes: Route[];
+  onRouteSelect: (route: BusRoute) => void;
+  routes: BusRoute[];
   loading: boolean;
   error: string | null;
 }

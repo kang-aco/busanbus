@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Loader2 } from "lucide-react";
 import BusSearchPanel from "@/components/bus/BusSearchPanel";
 import RouteList from "@/components/bus/RouteList";
 import RouteDetailPanel from "@/components/bus/RouteDetailPanel";
@@ -9,24 +10,22 @@ import BusMap from "@/components/bus/BusMap";
 import StopSearchPanel from "@/components/bus/StopSearchPanel";
 import { useBusSearch } from "@/hooks/useBusSearch";
 import { useBusLocations } from "@/hooks/useBusLocations";
+import { useBusArrivals } from "@/hooks/useBusArrivals";
 import { useFavorites } from "@/hooks/useFavorites";
-
-interface Route {
-  lineId: string;
-  lineNo: string;
-  busType: string;
-  companyId: string;
-}
+import type { BusRoute } from "@/lib/bus-api/types";
 
 export default function Home() {
-  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
+  const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(null);
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
   const [selectedStopName, setSelectedStopName] = useState<string | null>(null);
   const [showStopSearch, setShowStopSearch] = useState(false);
 
-  const { routes = [], loading = false, error = null, searchBus } = useBusSearch() || {};
-  const { locations: busLocations = [] } = useBusLocations(selectedRoute?.lineId || null) || {};
-  const { favorites = [], toggleFavorite } = useFavorites() || {};
+  const { routes = [], loading = false, error = null, searchBus } = useBusSearch();
+  const { locations: busLocations = [], locationLoading, locationError } = useBusLocations(selectedRoute?.lineId || null);
+  const { arrivals = [], arrivalLoading, arrivalError } = useBusArrivals(selectedStopId);
+  const { favorites = [], toggleFavorite } = useFavorites();
+
+  const isFavorite = (lineId: string) => favorites.includes(lineId);
 
   const handleSearch = (lineNo: string) => {
     if (searchBus) {
@@ -35,7 +34,7 @@ export default function Home() {
     setSelectedRoute(null);
   };
 
-  const handleRouteSelect = (route: Route) => {
+  const handleRouteSelect = (route: BusRoute) => {
     setSelectedRoute(route);
     setSelectedStopId(null);
     setSelectedStopName(null);
@@ -72,18 +71,34 @@ export default function Home() {
               <div className="bg-white rounded-lg shadow-md p-6">
                 <RouteList
                   routes={routes}
-                  onRouteSelect={handleRouteSelect}
-                  favorites={favorites}
-                  onToggleFavorite={toggleFavorite}
+                  selectedRouteId={selectedRoute?.lineId ?? null}
+                  onSelect={handleRouteSelect}
+                  isFavorite={isFavorite}
+                  onToggleFavorite={(route) => toggleFavorite(route.lineId)}
                 />
               </div>
             )}
 
             {selectedRoute && (
-              <RouteDetailPanel
-                route={selectedRoute}
-                onBack={() => setSelectedRoute(null)}
-              />
+              <div className="space-y-6">
+                {locationLoading && (
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    버스 위치 정보를 불러오는 중...
+                  </div>
+                )}
+                
+                {locationError && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                    {locationError}
+                  </div>
+                )}
+                
+                <RouteDetailPanel
+                  route={selectedRoute}
+                  locations={busLocations}
+                />
+              </div>
             )}
           </div>
 
@@ -120,33 +135,27 @@ export default function Home() {
                     닫기
                   </button>
                 </div>
-                <ArrivalPanel stopId={selectedStopId} />
+                
+                {arrivalLoading && (
+                  <p className="text-center py-4 text-gray-500">도착 정보 로딩 중...</p>
+                )}
+                
+                {arrivalError && (
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 mb-4">
+                    {arrivalError}
+                  </div>
+                )}
+                
+                <ArrivalPanel arrivals={arrivals} />
               </div>
             )}
 
             {/* 실시간 버스 위치 지도 */}
-            {selectedRoute && busLocations.length > 0 && (
+            {selectedRoute && (
               <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-bold mb-4">
-                  🚌 {selectedRoute.lineNo}번 실시간 위치
-                </h2>
                 <BusMap
                   locations={busLocations}
-                  lineNo={selectedRoute.lineNo}
                 />
-              </div>
-            )}
-
-            {/* 버스 위치 없음 안내 */}
-            {selectedRoute && busLocations.length === 0 && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-bold mb-4">
-                  🚌 {selectedRoute.lineNo}번 실시간 위치
-                </h2>
-                <div className="text-center py-8 text-gray-500">
-                  <p>현재 운행 중인 버스가 없습니다.</p>
-                  <p className="text-sm mt-2">운행 시간을 확인해주세요.</p>
-                </div>
               </div>
             )}
           </div>
