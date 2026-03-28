@@ -34,7 +34,7 @@ export default function StopSearchPanel({ onStopSelect }: StopSearchPanelProps) 
         setStops([]);
       } else {
         setStops(data.stops || []);
-        if (data.stops.length === 0) {
+        if (!data.stops || data.stops.length === 0) {
           setError("검색 결과가 없습니다.");
         }
       }
