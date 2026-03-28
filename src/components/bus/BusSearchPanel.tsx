@@ -1,6 +1,5 @@
-import { Search, Loader2, X } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 import { useState } from "react";
-
 
 interface Route {
   lineId: string;
@@ -32,8 +31,6 @@ export default function BusSearchPanel({
     }
     return [];
   });
-
-  const debouncedSearch = useDebounce(searchQuery, 300);
 
   const handleSearch = () => {
     if (!searchQuery.trim()) return;
@@ -84,14 +81,12 @@ export default function BusSearchPanel({
             onKeyPress={handleKeyPress}
             placeholder="버스 번호 입력 (예: 179)"
             className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            aria-label="버스 번호 검색"
           />
         </div>
         <button
           onClick={handleSearch}
           disabled={loading || !searchQuery.trim()}
           className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          aria-label="검색"
         >
           {loading ? (
             <>
