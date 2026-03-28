@@ -16,93 +16,29 @@ export async function onRequest(context: any) {
     );
   }
 
-  // 🔍 여러 엔드포인트 시도
-  const endpoints = [
-    { name: "busLocationByRouteId", params: { lineid: lineId } },
-    { name: "busInfoByRouteId", params: { lineid: lineId } },
-    { name: "getBusLocationByRoute", params: { lineid: lineId } },
-    { name: "busLocation", params: { lineid: lineId } },
-    { name: "getBusInfo", params: { lineid: lineId } },
-  ];
+  try {
+    // busInfoByRouteId 사용 (이전에 성공한 엔드포인트)
+    const apiUrl = new URL(
+      "https://apis.data.go.kr/6260000/BusanBIMS/busInfoByRouteId"
+    );
+    apiUrl.searchParams.set("serviceKey", serviceKey);
+    apiUrl.searchParams.set("lineid", lineId);
 
-  const results: any[] = [];
+    const response = await fetch(apiUrl.toString());
+    const rawData = await response.text();
 
-  for (const endpoint of endpoints) {
-    try {
-      const apiUrl = new URL(
-        `https://apis.data.go.kr/6260000/BusanBIMS/${endpoint.name}`
-      );
-      apiUrl.searchParams.set("serviceKey", serviceKey);
-      
-      for (const [key, value] of Object.entries(endpoint.params)) {
-        apiUrl.searchParams.set(key, String(value));
-      }
+    // 🔍 디버깅: 원본 XML 반환
+    return Response.json({
+      _debug: true,
+      httpStatus: response.status,
+      rawDataPreview: rawData.substring(0, 2000),
+      rawDataFull: rawData,
+    });
 
-      const response = await fetch(apiUrl.toString());
-      const rawData = await response.text();
-
-      results.push({
-        endpoint: endpoint.name,
-        httpStatus: response.status,
-        responsePreview: rawData.substring(0, 300),
-        isXml: rawData.includes("<?xml") || rawData.includes("<response>"),
-        hasResultCode: rawData.includes("<resultCode>"),
-      });
-
-      if (response.status === 200 && rawData.includes("<resultCode>")) {
-        const resultCodeMatch = rawData.match(/<resultCode>\s*(.+?)\s*<\/resultCode>/);
-        const resultCode = resultCodeMatch ? resultCodeMatch[1].trim() : "";
-        
-        if (resultCode === "00") {
-          // ✅ 성공!
-          const itemRegex = /<item>([\s\S]*?)<\/item>/g;
-          const items = [...rawData.matchAll(itemRegex)];
-          
-          const locations = items.map((itemMatch) => {
-            const itemContent = itemMatch[1];
-            
-            const getTag = (tag: string) => {
-              const match = itemContent.match(new RegExp(`<${tag}>\\s*([^<]*)\\s*<\\/${tag}>`));
-              return match ? match[1].trim() : "";
-            };
-
-            const nodeId = getTag("nodeid");
-            const plateNo = getTag("carno");
-            const lineIdVal = getTag("lineid");
-
-            return {
-              vehId: `${lineIdVal}-${nodeId}-${plateNo}`,
-              lineId: lineIdVal,
-              lineNo: getTag("lineno"),
-              nodeId,
-              nodeNm: getTag("nodenm"),
-              gpsX: getTag("gpsx"),
-              gpsY: getTag("gpsy"),
-              plateNo,
-            };
-          });
-
-          return Response.json({ 
-            locations,
-            _debug: {
-              successEndpoint: endpoint.name,
-              itemCount: items.length
-            }
-          });
-        }
-      }
-    } catch (error: any) {
-      results.push({
-        endpoint: endpoint.name,
-        error: error.message,
-      });
-    }
+  } catch (error: any) {
+    return Response.json(
+      { error: "위치 조회 실패", details: error.message },
+      { status: 500 }
+    );
   }
-
-  // 모든 시도 실패 - 디버그 정보 반환
-  return Response.json({
-    error: "모든 엔드포인트 시도 실패",
-    attempts: results,
-    lineId: lineId,
-  }, { status: 502 });
 }
