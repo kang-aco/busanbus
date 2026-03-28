@@ -17,7 +17,6 @@ export async function onRequest(context: any) {
   }
 
   try {
-    // ✅ 올바른 서비스명: BusanBIMS
     const apiUrl = new URL(
       "https://apis.data.go.kr/6260000/BusanBIMS/getRouteInfo"
     );
@@ -33,45 +32,20 @@ export async function onRequest(context: any) {
 
     const rawData = await response.text();
 
-    if (rawData.includes("Unexpected errors")) {
-      return Response.json(
-        { error: "API 인증 실패", details: "Unexpected errors" },
-        { status: 401 }
-      );
-    }
-
-    const resultCodeMatch = rawData.match(/<resultCode>\s*(.+?)\s*<\/resultCode>/);
-    const resultCode = resultCodeMatch ? resultCodeMatch[1].trim() : "";
-
-    if (!resultCode || resultCode !== "00") {
-      const resultMsgMatch = rawData.match(/<resultMsg>\s*(.+?)\s*<\/resultMsg>/);
-      const resultMsg = resultMsgMatch ? resultMsgMatch[1].trim() : "Unknown error";
-      return Response.json(
-        { error: "API 오류", code: resultCode, details: resultMsg },
-        { status: 502 }
-      );
-    }
-
-    const itemRegex = /<item>([\s\S]*?)<\/item>/g;
-    const items = [...rawData.matchAll(itemRegex)];
-    
-    const routes = items.map((itemMatch) => {
-      const itemContent = itemMatch[1];
-      
-      const getTag = (tag: string) => {
-        const match = itemContent.match(new RegExp(`<${tag}>\\s*([^<]*)\\s*<\\/${tag}>`));
-        return match ? match[1].trim() : "";
-      };
-
-      return {
-        lineId: getTag("lineid"),
-        lineNo: getTag("lineno"),
-        busType: getTag("bustype"),
-        companyId: getTag("companyid"),
-      };
+    // 🔍 디버깅: 원본 응답 전체 반환
+    return Response.json({
+      _debug: true,
+      httpStatus: response.status,
+      rawDataLength: rawData.length,
+      rawDataPreview: rawData.substring(0, 1000),
+      rawDataFull: rawData, // 전체 응답
+      keyInfo: {
+        length: serviceKey.length,
+        first10: serviceKey.substring(0, 10),
+        last10: serviceKey.substring(serviceKey.length - 10),
+      }
     });
 
-    return Response.json({ routes });
   } catch (error: any) {
     console.error("[Route List Error]:", error.message);
     return Response.json(
