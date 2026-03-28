@@ -24,12 +24,14 @@ export default function Home() {
   const [selectedStopName, setSelectedStopName] = useState<string | null>(null);
   const [showStopSearch, setShowStopSearch] = useState(false);
 
-  const { routes, loading, error, searchBus } = useBusSearch();
-  const { locations: busLocations } = useBusLocations(selectedRoute?.lineId || null);
-  const { favorites, toggleFavorite } = useFavorites();
+  const { routes = [], loading = false, error = null, searchBus } = useBusSearch() || {};
+  const { locations: busLocations = [] } = useBusLocations(selectedRoute?.lineId || null) || {};
+  const { favorites = [], toggleFavorite } = useFavorites() || {};
 
   const handleSearch = (lineNo: string) => {
-    searchBus(lineNo);
+    if (searchBus) {
+      searchBus(lineNo);
+    }
     setSelectedRoute(null);
   };
 
@@ -125,31 +127,4 @@ export default function Home() {
             {/* 실시간 버스 위치 지도 */}
             {selectedRoute && busLocations.length > 0 && (
               <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-bold mb-4">
-                  🚌 {selectedRoute.lineNo}번 실시간 위치
-                </h2>
-                <BusMap
-                  locations={busLocations}
-                  lineNo={selectedRoute.lineNo}
-                />
-              </div>
-            )}
-
-            {/* 버스 위치 없음 안내 */}
-            {selectedRoute && busLocations.length === 0 && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-bold mb-4">
-                  🚌 {selectedRoute.lineNo}번 실시간 위치
-                </h2>
-                <div className="text-center py-8 text-gray-500">
-                  <p>현재 운행 중인 버스가 없습니다.</p>
-                  <p className="text-sm mt-2">운행 시간을 확인해주세요.</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+                <h2 clas
