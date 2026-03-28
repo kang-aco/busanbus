@@ -18,10 +18,14 @@ export async function onRequest(context: any) {
 
   // 🔍 여러 엔드포인트 시도
   const endpoints = [
-    { name: "busInfoByRouteId", params: { lineid: lineId } },
-    { name: "getBusInfoByRouteId", params: { lineid: lineId } },
     { name: "busLocationByRouteId", params: { lineid: lineId } },
+    { name: "busInfoByRouteId", params: { lineid: lineId } },
+    { name: "getBusLocationByRoute", params: { lineid: lineId } },
+    { name: "busLocation", params: { lineid: lineId } },
+    { name: "getBusInfo", params: { lineid: lineId } },
   ];
+
+  const results: any[] = [];
 
   for (const endpoint of endpoints) {
     try {
@@ -37,11 +41,20 @@ export async function onRequest(context: any) {
       const response = await fetch(apiUrl.toString());
       const rawData = await response.text();
 
+      results.push({
+        endpoint: endpoint.name,
+        httpStatus: response.status,
+        responsePreview: rawData.substring(0, 300),
+        isXml: rawData.includes("<?xml") || rawData.includes("<response>"),
+        hasResultCode: rawData.includes("<resultCode>"),
+      });
+
       if (response.status === 200 && rawData.includes("<resultCode>")) {
         const resultCodeMatch = rawData.match(/<resultCode>\s*(.+?)\s*<\/resultCode>/);
         const resultCode = resultCodeMatch ? resultCodeMatch[1].trim() : "";
         
         if (resultCode === "00") {
+          // ✅ 성공!
           const itemRegex = /<item>([\s\S]*?)<\/item>/g;
           const items = [...rawData.matchAll(itemRegex)];
           
@@ -69,16 +82,27 @@ export async function onRequest(context: any) {
             };
           });
 
-          return Response.json({ locations });
+          return Response.json({ 
+            locations,
+            _debug: {
+              successEndpoint: endpoint.name,
+              itemCount: items.length
+            }
+          });
         }
       }
-    } catch (error) {
-      continue;
+    } catch (error: any) {
+      results.push({
+        endpoint: endpoint.name,
+        error: error.message,
+      });
     }
   }
 
-  return Response.json(
-    { error: "위치 조회 실패", details: "모든 엔드포인트 시도 실패" },
-    { status: 502 }
-  );
+  // 모든 시도 실패 - 디버그 정보 반환
+  return Response.json({
+    error: "모든 엔드포인트 시도 실패",
+    attempts: results,
+    lineId: lineId,
+  }, { status: 502 });
 }
