@@ -16,55 +16,65 @@ export async function onRequest(context: any) {
     );
   }
 
-  try {
-    // ✅ 올바른 엔드포인트: busInfo
-    const apiUrl = new URL(
-      "https://apis.data.go.kr/6260000/BusanBIMS/busInfo"
-    );
+  const fetchRoutes = async (endpoint: string, paramName: string) => {
+    const apiUrl = new URL(`https://apis.data.go.kr/6260000/BusanBIMS/${endpoint}`);
     apiUrl.searchParams.set("serviceKey", serviceKey);
-    apiUrl.searchParams.set("lineno", lineNo);
+    apiUrl.searchParams.set(paramName, lineNo);
 
     const response = await fetch(apiUrl.toString(), {
-      headers: {
-        Accept: "*/*",
-        "User-Agent": "Mozilla/5.0",
-      },
+      headers: { Accept: "*/*", "User-Agent": "Mozilla/5.0" },
     });
-
     const rawData = await response.text();
 
-    // resultCode 확인
-    const resultCodeMatch = rawData.match(/<resultCode>\s*(.+?)\s*<\/resultCode>/);
+    const getTag = (content: string, tag: string) => {
+      const match = content.match(new RegExp(`<${tag}>\\s*([^<]*)\\s*<\\/${tag}>`, "i"));
+      return match ? match[1].trim() : "";
+    };
+
+    const resultCodeMatch = rawData.match(/<resultCode>\s*(.+?)\s*<\/resultCode>/i);
     const resultCode = resultCodeMatch ? resultCodeMatch[1].trim() : "";
 
-    if (resultCode !== "00") {
-      const resultMsgMatch = rawData.match(/<resultMsg>\s*(.+?)\s*<\/resultMsg>/);
-      const resultMsg = resultMsgMatch ? resultMsgMatch[1].trim() : "Unknown error";
-      return Response.json(
-        { error: "API 오류", code: resultCode, details: resultMsg },
-        { status: 502 }
-      );
+    if (resultCode === "00") {
+      const itemRegex = /<item>([\s\S]*?)<\/item>/gi;
+      const items = [...rawData.matchAll(itemRegex)];
+      
+      return items.map((itemMatch) => {
+        const itemContent = itemMatch[1];
+        return {
+          lineId: getTag(itemContent, "lineid") || getTag(itemContent, "lineId"),
+          lineNo: getTag(itemContent, "lineno") || getTag(itemContent, "lineNo") || getTag(itemContent, "line_no"),
+          busType: getTag(itemContent, "bustype") || getTag(itemContent, "busType"),
+          companyId: getTag(itemContent, "companyid") || getTag(itemContent, "companyId"),
+        };
+      });
+    }
+    
+    // 결과 없음 (01)
+    if (resultCode === "01" || rawData.includes("결과가 없습니다")) {
+      return [];
     }
 
-    // <item> 태그들 추출
-    const itemRegex = /<item>([\s\S]*?)<\/item>/g;
-    const items = [...rawData.matchAll(itemRegex)];
-    
-    const routes = items.map((itemMatch) => {
-      const itemContent = itemMatch[1];
-      
-      const getTag = (tag: string) => {
-        const match = itemContent.match(new RegExp(`<${tag}>\\s*([^<]*)\\s*<\\/${tag}>`));
-        return match ? match[1].trim() : "";
-      };
+    throw new Error(`API Error: ${resultCode}`);
+  };
 
-      return {
-        lineId: getTag("lineid"),
-        lineNo: getTag("lineno"),
-        busType: getTag("bustype"),
-        companyId: getTag("companyid"),
-      };
-    });
+  try {
+    let routes: any[] = [];
+    
+    try {
+      // 1차 시도: busInfo (lineno)
+      routes = await fetchRoutes("busInfo", "lineno");
+    } catch (e) {
+      console.warn("busInfo failed, trying getBusRouteList...");
+    }
+
+    if (routes.length === 0) {
+      try {
+        // 2차 시도: getBusRouteList (lineNo)
+        routes = await fetchRoutes("getBusRouteList", "lineNo");
+      } catch (e) {
+        console.warn("getBusRouteList failed");
+      }
+    }
 
     return Response.json({ routes });
   } catch (error: any) {

@@ -15,7 +15,7 @@ export default function RouteDetailPanel({
   return (
     <div className="rounded-3xl border bg-white p-4 shadow-sm">
       <div className="mb-4">
-        <h2 className="text-xl font-bold">{route.lineNo}번 실시간 위치</h2>
+        <h2 className="text-xl font-bold">{(route.lineNo || route.lineId).split(':').pop()}번 실시간 위치</h2>
         <p className="text-sm text-gray-500">
           노선 ID: {route.lineId} · 운행중인 버스: {locations.length}대
         </p>

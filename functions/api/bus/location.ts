@@ -17,51 +17,35 @@ export async function onRequest(context: any) {
   }
 
   try {
-    // ✅ getBusLocationList - 노선별 실시간 버스 위치 목록 조회
-    const apiUrl = new URL(
-      "https://apis.data.go.kr/6260000/BusanBIMS/getBusLocationList"
-    );
+    // ✅ 1차 시도: getBusLocationList (실시간 위치 전용)
+    const apiUrl = new URL("https://apis.data.go.kr/6260000/BusanBIMS/getBusLocationList");
     apiUrl.searchParams.set("serviceKey", serviceKey);
     apiUrl.searchParams.set("lineid", lineId);
 
     const response = await fetch(apiUrl.toString());
     const rawData = await response.text();
 
-    const resultCodeMatch = rawData.match(/<resultCode>\s*(.+?)\s*<\/resultCode>/);
+    const getTag = (content: string, tag: string) => {
+      const match = content.match(new RegExp(`<${tag}>\\s*([^<]*)\\s*<\\/${tag}>`, "i"));
+      return match ? match[1].trim() : "";
+    };
+
+    const resultCodeMatch = rawData.match(/<resultCode>\s*(.+?)\s*<\/resultCode>/i);
     const resultCode = resultCodeMatch ? resultCodeMatch[1].trim() : "";
-    
-    if (resultCode !== "00") {
-      // 결과가 없는 경우 (운행 중인 버스 없음) 00이 아닐 수 있음
-      if (resultCode === "01" || rawData.includes("결과가 없습니다")) {
-        return Response.json({ locations: [] });
-      }
 
-      const resultMsgMatch = rawData.match(/<resultMsg>\s*(.+?)\s*<\/resultMsg>/);
-      const resultMsg = resultMsgMatch ? resultMsgMatch[1].trim() : "Unknown error";
-      return Response.json(
-        { error: "API 오류", code: resultCode, details: resultMsg },
-        { status: 502 }
-      );
-    }
+    let locations: any[] = [];
 
-    // <item> 태그들 추출
-    const itemRegex = /<item>([\s\S]*?)<\/item>/g;
-    const items = [...rawData.matchAll(itemRegex)];
-    
-    const locations = items
-      .map((itemMatch) => {
+    if (resultCode === "00") {
+      const itemRegex = /<item>([\s\S]*?)<\/item>/gi;
+      const items = [...rawData.matchAll(itemRegex)];
+      
+      locations = items.map((itemMatch) => {
         const itemContent = itemMatch[1];
-        
-        const getTag = (tag: string) => {
-          const match = itemContent.match(new RegExp(`<${tag}>\\s*([^<]*)\\s*<\\/${tag}>`));
-          return match ? match[1].trim() : "";
-        };
-
-        const gpsX = getTag("gpsX"); // 경도 (Longitude)
-        const gpsY = getTag("gpsY"); // 위도 (Latitude)
-        const vehId = getTag("vehId");
-        const plateNo = getTag("plateNo");
-        const nodeId = getTag("nodeId");
+        const gpsX = getTag(itemContent, "gpsX") || getTag(itemContent, "lin");
+        const gpsY = getTag(itemContent, "gpsY") || getTag(itemContent, "lat");
+        const vehId = getTag(itemContent, "vehId") || getTag(itemContent, "carno");
+        const plateNo = getTag(itemContent, "plateNo") || getTag(itemContent, "carno");
+        const nodeId = getTag(itemContent, "nodeId") || getTag(itemContent, "nodeid");
 
         if (!gpsX || !gpsY) return null;
 
@@ -69,12 +53,52 @@ export async function onRequest(context: any) {
           vehId: vehId || `${lineId}-${nodeId}-${plateNo}`,
           lineId,
           nodeId,
-          gpsX, // Longitude
-          gpsY, // Latitude
+          gpsX,
+          gpsY,
           plateNo,
         };
-      })
-      .filter((loc) => loc !== null);
+      }).filter(Boolean);
+    }
+
+    // ✅ 2차 시도: busInfoByRouteId (결과가 없거나 1차 실패 시)
+    if (locations.length === 0) {
+      const fallbackUrl = new URL("https://apis.data.go.kr/6260000/BusanBIMS/busInfoByRouteId");
+      fallbackUrl.searchParams.set("serviceKey", serviceKey);
+      fallbackUrl.searchParams.set("lineid", lineId);
+
+      const fbResponse = await fetch(fallbackUrl.toString());
+      const fbRawData = await fbResponse.text();
+
+      const fbItemRegex = /<item>([\s\S]*?)<\/item>/gi;
+      const fbItems = [...fbRawData.matchAll(fbItemRegex)];
+
+      const fbLocations = fbItems.map((itemMatch) => {
+        const itemContent = itemMatch[1];
+        const plateNo = getTag(itemContent, "carno");
+        
+        // carno가 있는 것만 실제 버스 위치임
+        if (!plateNo || plateNo === "") return null;
+
+        const gpsX = getTag(itemContent, "lin") || getTag(itemContent, "gpsX");
+        const gpsY = getTag(itemContent, "lat") || getTag(itemContent, "gpsY");
+        const nodeId = getTag(itemContent, "nodeid") || getTag(itemContent, "nodeId");
+
+        if (!gpsX || !gpsY) return null;
+
+        return {
+          vehId: plateNo,
+          lineId,
+          nodeId,
+          gpsX,
+          gpsY,
+          plateNo,
+        };
+      }).filter(Boolean);
+
+      if (fbLocations.length > 0) {
+        locations = fbLocations;
+      }
+    }
 
     return Response.json({ locations });
   } catch (error: any) {

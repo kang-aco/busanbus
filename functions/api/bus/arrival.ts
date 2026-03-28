@@ -49,7 +49,7 @@ export async function onRequest(context: any) {
             const itemContent = itemMatch[1];
             
             const getTag = (tag: string) => {
-              const match = itemContent.match(new RegExp(`<${tag}>\\s*([^<]*)\\s*<\\/${tag}>`));
+              const match = itemContent.match(new RegExp(`<${tag}>\\s*([^<]*)\\s*<\\/${tag}>`, "i"));
               return match ? match[1].trim() : "";
             };
 
@@ -65,6 +65,10 @@ export async function onRequest(context: any) {
           });
 
           return Response.json({ arrivals });
+        }
+
+        if (resultCode === "01" || rawData.includes("결과가 없습니다")) {
+          return Response.json({ arrivals: [] });
         }
       }
     } catch (error) {
