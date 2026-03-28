@@ -16,82 +16,116 @@ export async function onRequest(context: any) {
     );
   }
 
+  // 🔍 디버깅: 키 정보 확인
+  const keyInfo = {
+    length: serviceKey.length,
+    first10: serviceKey.substring(0, 10),
+    last10: serviceKey.substring(serviceKey.length - 10),
+    hasPlus: serviceKey.includes('+'),
+    hasSlash: serviceKey.includes('/'),
+  };
+
   try {
-    const apiUrl = new URL(
-      "https://apis.data.go.kr/6260000/BusanBmsService/getBusRouteList"
-    );
-    apiUrl.searchParams.set("serviceKey", serviceKey);
-    apiUrl.searchParams.set("lineNo", lineNo);
-
-    const response = await fetch(apiUrl.toString(), {
-      headers: {
-        Accept: "*/*",
-        "User-Agent": "Mozilla/5.0",
+    // ✅ 여러 서비스명/엔드포인트 시도
+    const attempts = [
+      {
+        service: "BusanBmsService",
+        endpoint: "getBusRouteList",
+        params: { lineNo }
       },
-    });
+      {
+        service: "BusanBIS",
+        endpoint: "busRouteList", 
+        params: { lineno: lineNo }
+      },
+      {
+        service: "busanBIMS",
+        endpoint: "getBusRouteInfo",
+        params: { lineNo }
+      }
+    ];
 
-    const rawData = await response.text();
-    
-    // 디버깅: 응답 일부 로그
-    console.log("[Route List] Response preview:", rawData.substring(0, 500));
-
-    // resultCode 확인 (더 유연한 정규식)
-    const resultCodeMatch = rawData.match(/<resultCode>\s*(.+?)\s*<\/resultCode>/);
-    const resultCode = resultCodeMatch ? resultCodeMatch[1].trim() : "";
-    
-    console.log("[Route List] resultCode:", resultCode);
-    
-    // resultCode가 비어있거나 00이 아니면 에러
-    if (!resultCode) {
-      // resultCode를 찾지 못함 - 원본 응답 반환
-      return Response.json(
-        { 
-          error: "API 응답 파싱 실패", 
-          details: "resultCode를 찾을 수 없습니다.",
-          preview: rawData.substring(0, 500)
-        },
-        { status: 502 }
+    for (const attempt of attempts) {
+      const apiUrl = new URL(
+        `https://apis.data.go.kr/6260000/${attempt.service}/${attempt.endpoint}`
       );
-    }
-    
-    if (resultCode !== "00") {
-      const resultMsgMatch = rawData.match(/<resultMsg>\s*(.+?)\s*<\/resultMsg>/);
-      const resultMsg = resultMsgMatch ? resultMsgMatch[1].trim() : "Unknown error";
-      return Response.json(
-        { error: "API 오류", code: resultCode, details: resultMsg },
-        { status: 502 }
-      );
-    }
-
-    // <item> 태그들 추출
-    const itemRegex = /<item>([\s\S]*?)<\/item>/g;
-    const items = [...rawData.matchAll(itemRegex)];
-    
-    console.log("[Route List] Found items:", items.length);
-    
-    const routes = items.map((itemMatch) => {
-      const itemContent = itemMatch[1];
+      apiUrl.searchParams.set("serviceKey", serviceKey);
       
-      const getTag = (tag: string) => {
-        const match = itemContent.match(new RegExp(`<${tag}>\\s*([^<]*)\\s*<\\/${tag}>`));
-        return match ? match[1].trim() : "";
-      };
+      for (const [key, value] of Object.entries(attempt.params)) {
+        apiUrl.searchParams.set(key, String(value));
+      }
 
-      return {
-        lineId: getTag("lineid"),
-        lineNo: getTag("buslinenum"),
-        busType: getTag("bustype"),
-        companyId: getTag("companyid"),
-      };
-    });
+      console.log(`[Attempt] ${attempt.service}/${attempt.endpoint}`);
 
-    console.log("[Route List] Parsed routes:", JSON.stringify(routes));
+      const response = await fetch(apiUrl.toString(), {
+        headers: {
+          Accept: "*/*",
+          "User-Agent": "Mozilla/5.0",
+        },
+      });
 
-    return Response.json({ routes });
-  } catch (error: any) {
-    console.error("[Route List Error]:", error.message, error.stack);
+      const rawData = await response.text();
+      const preview = rawData.substring(0, 200);
+
+      console.log(`[Response] ${preview}`);
+
+      // "Unexpected errors" 체크
+      if (rawData.includes("Unexpected errors")) {
+        console.log(`[Failed] ${attempt.service}/${attempt.endpoint} - Unexpected errors`);
+        continue; // 다음 시도
+      }
+
+      // resultCode 확인
+      const resultCodeMatch = rawData.match(/<resultCode>\s*(.+?)\s*<\/resultCode>/);
+      const resultCode = resultCodeMatch ? resultCodeMatch[1].trim() : "";
+
+      if (resultCode === "00") {
+        // ✅ 성공! 데이터 파싱
+        const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+        const items = [...rawData.matchAll(itemRegex)];
+        
+        const routes = items.map((itemMatch) => {
+          const itemContent = itemMatch[1];
+          
+          const getTag = (tag: string) => {
+            const match = itemContent.match(new RegExp(`<${tag}>\\s*([^<]*)\\s*<\\/${tag}>`));
+            return match ? match[1].trim() : "";
+          };
+
+          return {
+            lineId: getTag("lineid") || getTag("lineId"),
+            lineNo: getTag("buslinenum") || getTag("lineNo") || getTag("lineno"),
+            busType: getTag("bustype") || getTag("busType"),
+            companyId: getTag("companyid") || getTag("companyId"),
+          };
+        });
+
+        return Response.json({ 
+          routes,
+          _debug: {
+            usedService: attempt.service,
+            usedEndpoint: attempt.endpoint,
+            keyInfo
+          }
+        });
+      }
+    }
+
+    // 모든 시도 실패
     return Response.json(
-      { error: "노선 조회 실패", details: error.message },
+      { 
+        error: "모든 API 호출 실패", 
+        details: "모든 서비스명/엔드포인트 조합에서 Unexpected errors 발생",
+        keyInfo,
+        tried: attempts.map(a => `${a.service}/${a.endpoint}`)
+      },
+      { status: 502 }
+    );
+
+  } catch (error: any) {
+    console.error("[Route List Error]:", error.message);
+    return Response.json(
+      { error: "노선 조회 실패", details: error.message, keyInfo },
       { status: 500 }
     );
   }
