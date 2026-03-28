@@ -23,8 +23,6 @@ export async function onRequest(context: any) {
     apiUrl.searchParams.set("serviceKey", serviceKey);
     apiUrl.searchParams.set("lineNo", lineNo);
 
-    console.log("[Route List] Calling API...");
-
     const response = await fetch(apiUrl.toString(), {
       headers: {
         Accept: "*/*",
@@ -33,33 +31,39 @@ export async function onRequest(context: any) {
     });
 
     const rawData = await response.text();
-    console.log("[Route List] Response received, length:", rawData.length);
 
-    // XML 파싱
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(rawData, "text/xml");
-    
-    // resultCode 확인
-    const resultCode = xmlDoc.querySelector("resultCode")?.textContent || "";
+    // resultCode 확인 (간단한 정규식)
+    const resultCodeMatch = rawData.match(/<resultCode>(.+?)<\/resultCode>/);
+    const resultCode = resultCodeMatch ? resultCodeMatch[1] : "";
     
     if (resultCode !== "00") {
-      const resultMsg = xmlDoc.querySelector("resultMsg")?.textContent || "Unknown error";
+      const resultMsgMatch = rawData.match(/<resultMsg>(.+?)<\/resultMsg>/);
+      const resultMsg = resultMsgMatch ? resultMsgMatch[1] : "Unknown error";
       return Response.json(
         { error: "API 오류", code: resultCode, details: resultMsg },
         { status: 502 }
       );
     }
 
-    // 노선 데이터 추출
-    const items = xmlDoc.querySelectorAll("item");
-    const routes = Array.from(items).map((item) => ({
-      lineId: item.querySelector("lineid")?.textContent || "",
-      lineNo: item.querySelector("buslinenum")?.textContent || "",
-      busType: item.querySelector("bustype")?.textContent || "",
-      companyId: item.querySelector("companyid")?.textContent || "",
-    }));
+    // <item> 태그들 추출
+    const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+    const items = [...rawData.matchAll(itemRegex)];
+    
+    const routes = items.map((itemMatch) => {
+      const itemContent = itemMatch[1];
+      
+      const getTag = (tag: string) => {
+        const match = itemContent.match(new RegExp(`<${tag}>([^<]*)<\/${tag}>`));
+        return match ? match[1] : "";
+      };
 
-    console.log("[Route List] Parsed routes:", routes.length);
+      return {
+        lineId: getTag("lineid"),
+        lineNo: getTag("buslinenum"),
+        busType: getTag("bustype"),
+        companyId: getTag("companyid"),
+      };
+    });
 
     return Response.json({ routes });
   } catch (error: any) {

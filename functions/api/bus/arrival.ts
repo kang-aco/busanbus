@@ -26,29 +26,39 @@ export async function onRequest(context: any) {
     const response = await fetch(apiUrl.toString());
     const rawData = await response.text();
 
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(rawData, "text/xml");
-    
-    const resultCode = xmlDoc.querySelector("resultCode")?.textContent || "";
+    const resultCodeMatch = rawData.match(/<resultCode>(.+?)<\/resultCode>/);
+    const resultCode = resultCodeMatch ? resultCodeMatch[1] : "";
     
     if (resultCode !== "00") {
-      const resultMsg = xmlDoc.querySelector("resultMsg")?.textContent || "Unknown error";
+      const resultMsgMatch = rawData.match(/<resultMsg>(.+?)<\/resultMsg>/);
+      const resultMsg = resultMsgMatch ? resultMsgMatch[1] : "Unknown error";
       return Response.json(
         { error: "API 오류", code: resultCode, details: resultMsg },
         { status: 502 }
       );
     }
 
-    const items = xmlDoc.querySelectorAll("item");
-    const arrivals = Array.from(items).map((item) => ({
-      lineId: item.querySelector("lineid")?.textContent || "",
-      lineNo: item.querySelector("lineno")?.textContent || "",
-      station1: item.querySelector("station1")?.textContent || "",
-      station2: item.querySelector("station2")?.textContent || "",
-      min1: item.querySelector("min1")?.textContent || "",
-      min2: item.querySelector("min2")?.textContent || "",
-      stopId: item.querySelector("bstopid")?.textContent || "",
-    }));
+    const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+    const items = [...rawData.matchAll(itemRegex)];
+    
+    const arrivals = items.map((itemMatch) => {
+      const itemContent = itemMatch[1];
+      
+      const getTag = (tag: string) => {
+        const match = itemContent.match(new RegExp(`<${tag}>([^<]*)<\/${tag}>`));
+        return match ? match[1] : "";
+      };
+
+      return {
+        lineId: getTag("lineid"),
+        lineNo: getTag("lineno"),
+        station1: getTag("station1"),
+        station2: getTag("station2"),
+        min1: getTag("min1"),
+        min2: getTag("min2"),
+        stopId: getTag("bstopid"),
+      };
+    });
 
     return Response.json({ arrivals });
   } catch (error: any) {

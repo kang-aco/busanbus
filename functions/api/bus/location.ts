@@ -26,33 +26,41 @@ export async function onRequest(context: any) {
     const response = await fetch(apiUrl.toString());
     const rawData = await response.text();
 
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(rawData, "text/xml");
-    
-    const resultCode = xmlDoc.querySelector("resultCode")?.textContent || "";
+    const resultCodeMatch = rawData.match(/<resultCode>(.+?)<\/resultCode>/);
+    const resultCode = resultCodeMatch ? resultCodeMatch[1] : "";
     
     if (resultCode !== "00") {
-      const resultMsg = xmlDoc.querySelector("resultMsg")?.textContent || "Unknown error";
+      const resultMsgMatch = rawData.match(/<resultMsg>(.+?)<\/resultMsg>/);
+      const resultMsg = resultMsgMatch ? resultMsgMatch[1] : "Unknown error";
       return Response.json(
         { error: "API 오류", code: resultCode, details: resultMsg },
         { status: 502 }
       );
     }
 
-    const items = xmlDoc.querySelectorAll("item");
-    const locations = Array.from(items).map((item) => {
-      const nodeId = item.querySelector("nodeid")?.textContent || "";
-      const plateNo = item.querySelector("carno")?.textContent || "";
-      const lineId = item.querySelector("lineid")?.textContent || "";
+    const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+    const items = [...rawData.matchAll(itemRegex)];
+    
+    const locations = items.map((itemMatch) => {
+      const itemContent = itemMatch[1];
+      
+      const getTag = (tag: string) => {
+        const match = itemContent.match(new RegExp(`<${tag}>([^<]*)<\/${tag}>`));
+        return match ? match[1] : "";
+      };
+
+      const nodeId = getTag("nodeid");
+      const plateNo = getTag("carno");
+      const lineIdVal = getTag("lineid");
 
       return {
-        vehId: `${lineId}-${nodeId}-${plateNo}`,
-        lineId,
-        lineNo: item.querySelector("lineno")?.textContent || "",
+        vehId: `${lineIdVal}-${nodeId}-${plateNo}`,
+        lineId: lineIdVal,
+        lineNo: getTag("lineno"),
         nodeId,
-        nodeNm: item.querySelector("nodenm")?.textContent || "",
-        gpsX: item.querySelector("gpsx")?.textContent || "",
-        gpsY: item.querySelector("gpsy")?.textContent || "",
+        nodeNm: getTag("nodenm"),
+        gpsX: getTag("gpsx"),
+        gpsY: getTag("gpsy"),
         plateNo,
       };
     });
