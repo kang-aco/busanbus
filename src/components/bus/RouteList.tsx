@@ -3,7 +3,7 @@
 import { Star } from "lucide-react";
 import type { BusRoute } from "@/lib/bus-api/types";
 
-export function RouteList({
+export default function RouteList({
   routes,
   selectedRouteId,
   onSelect,

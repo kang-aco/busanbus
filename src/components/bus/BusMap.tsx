@@ -20,7 +20,7 @@ const mapOptions = {
   fullscreenControl: true,
 };
 
-export function BusMap({ locations }: { locations: BusLocation[] }) {
+export default function BusMap({ locations }: { locations: BusLocation[] }) {
   const [mapsApiKey, setMapsApiKey] = useState<string>("");
   const [keyError, setKeyError] = useState<string | null>(null);
 

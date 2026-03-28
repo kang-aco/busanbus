@@ -3,7 +3,7 @@
 import { MapPin } from "lucide-react";
 import type { BusLocation, BusRoute } from "@/lib/bus-api/types";
 
-export function RouteDetailPanel({
+export default function RouteDetailPanel({
   route,
   locations,
 }: {

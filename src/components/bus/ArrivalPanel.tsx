@@ -3,7 +3,7 @@
 import { Clock } from "lucide-react";
 import type { BusArrival } from "@/lib/bus-api/types";
 
-export function ArrivalPanel({ arrivals }: { arrivals: BusArrival[] }) {
+export default function ArrivalPanel({ arrivals }: { arrivals: BusArrival[] }) {
   return (
     <div className="rounded-3xl border bg-white p-4 shadow-sm">
       <h2 className="mb-4 text-lg font-bold">도착 예정 버스</h2>
