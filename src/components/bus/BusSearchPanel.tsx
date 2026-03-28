@@ -1,91 +1,139 @@
-"use client";
+import { Search, Loader2, X } from "lucide-react";
+import { useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 
-import { useEffect, useState } from "react";
-import { Search, X } from "lucide-react";
+interface Route {
+  lineId: string;
+  lineNo: string;
+  busType: string;
+  companyId: string;
+}
 
-export function BusSearchPanel({
-  searchQuery,
-  setSearchQuery,
-  onSearch,
-  loading,
-}: {
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
-  onSearch: (forcedQuery?: string) => void;
+interface BusSearchPanelProps {
+  onSearch: (lineNo: string) => void;
+  onRouteSelect: (route: Route) => void;
+  routes: Route[];
   loading: boolean;
-}) {
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  error: string | null;
+}
 
-  useEffect(() => {
-    const recent = JSON.parse(localStorage.getItem("recentBusSearches") || "[]");
-    setRecentSearches(recent);
-  }, [loading]);
+export default function BusSearchPanel({
+  onSearch,
+  onRouteSelect,
+  routes,
+  loading,
+  error,
+}: BusSearchPanelProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("recentBusSearches");
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
 
-  const handleSearch = (q: string) => {
-    setSearchQuery(q);
-    onSearch(q);
+  const debouncedSearch = useDebounce(searchQuery, 300);
+
+  const handleSearch = () => {
+    if (!searchQuery.trim()) return;
+
+    onSearch(searchQuery.trim());
+
+    // 최근 검색어 저장
+    const updated = [
+      searchQuery.trim(),
+      ...recentSearches.filter((s) => s !== searchQuery.trim()),
+    ].slice(0, 5);
+    setRecentSearches(updated);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("recentBusSearches", JSON.stringify(updated));
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  };
+
+  const handleRecentSearchClick = (search: string) => {
+    setSearchQuery(search);
+    onSearch(search);
   };
 
   const clearRecentSearches = () => {
-    localStorage.removeItem("recentBusSearches");
     setRecentSearches([]);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("recentBusSearches");
+    }
   };
 
   return (
-    <div className="space-y-3 rounded-3xl border bg-white p-4 shadow-sm">
+    <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
+      <h2 className="text-xl font-bold">버스 노선 검색</h2>
+
+      {/* 검색 입력 */}
       <div className="flex gap-2">
         <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
+            type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                onSearch();
-              }
-            }}
-            placeholder="버스 번호를 입력하세요 (예: 1002)"
-            className="w-full rounded-2xl border px-4 py-3 pr-10 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+            onKeyPress={handleKeyPress}
+            placeholder="버스 번호 입력 (예: 179)"
+            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             aria-label="버스 번호 검색"
-            disabled={loading}
           />
-          <Search className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
         </div>
         <button
-          onClick={() => onSearch()}
+          onClick={handleSearch}
           disabled={loading || !searchQuery.trim()}
-          className="rounded-2xl bg-blue-600 px-6 py-3 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 transition"
-          aria-label="검색하기"
+          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          aria-label="검색"
         >
-          {loading ? "검색중" : "검색"}
+          {loading ? (
+            <>
+              <Loader2 className="h-5 w-5 animate-spin" />
+              검색중
+            </>
+          ) : (
+            "검색"
+          )}
         </button>
       </div>
 
+      {/* 최근 검색 */}
       {recentSearches.length > 0 && (
-        <div className="border-t pt-3">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-xs font-medium text-gray-500">최근 검색</span>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-gray-700">최근 검색</p>
             <button
               onClick={clearRecentSearches}
-              className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition"
-              aria-label="최근 검색 기록 삭제"
+              className="text-xs text-gray-500 hover:text-gray-700"
             >
-              <X className="h-3 w-3" />
               전체 삭제
             </button>
           </div>
           <div className="flex flex-wrap gap-2">
-            {recentSearches.map((s, idx) => (
+            {recentSearches.map((search, index) => (
               <button
-                key={`${s}-${idx}`}
-                onClick={() => handleSearch(s)}
-                className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-600 hover:bg-gray-200 transition"
-                aria-label={`${s}번 버스 검색`}
+                key={index}
+                onClick={() => handleRecentSearchClick(search)}
+                className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200"
               >
-                {s}
+                {search}
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* 에러 메시지 */}
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          {error}
         </div>
       )}
     </div>
