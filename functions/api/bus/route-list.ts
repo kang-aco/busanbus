@@ -16,41 +16,92 @@ export async function onRequest(context: any) {
     );
   }
 
-  try {
-    const apiUrl = new URL(
-      "https://apis.data.go.kr/6260000/BusanBIMS/getRouteInfo"
-    );
-    apiUrl.searchParams.set("serviceKey", serviceKey);
-    apiUrl.searchParams.set("lineno", lineNo);
+  // 🔍 여러 엔드포인트 시도
+  const endpoints = [
+    { name: "busInfo", params: { lineno: lineNo } },
+    { name: "getBusRouteList", params: { lineno: lineNo } },
+    { name: "getRouteList", params: { lineno: lineNo } },
+    { name: "busRouteList", params: { lineno: lineNo } },
+    { name: "getRouteInfo", params: { lineno: lineNo } },
+  ];
 
-    const response = await fetch(apiUrl.toString(), {
-      headers: {
-        Accept: "*/*",
-        "User-Agent": "Mozilla/5.0",
-      },
-    });
+  const results: any[] = [];
 
-    const rawData = await response.text();
-
-    // 🔍 디버깅: 원본 응답 전체 반환
-    return Response.json({
-      _debug: true,
-      httpStatus: response.status,
-      rawDataLength: rawData.length,
-      rawDataPreview: rawData.substring(0, 1000),
-      rawDataFull: rawData, // 전체 응답
-      keyInfo: {
-        length: serviceKey.length,
-        first10: serviceKey.substring(0, 10),
-        last10: serviceKey.substring(serviceKey.length - 10),
+  for (const endpoint of endpoints) {
+    try {
+      const apiUrl = new URL(
+        `https://apis.data.go.kr/6260000/BusanBIMS/${endpoint.name}`
+      );
+      apiUrl.searchParams.set("serviceKey", serviceKey);
+      
+      for (const [key, value] of Object.entries(endpoint.params)) {
+        apiUrl.searchParams.set(key, String(value));
       }
-    });
 
-  } catch (error: any) {
-    console.error("[Route List Error]:", error.message);
-    return Response.json(
-      { error: "노선 조회 실패", details: error.message },
-      { status: 500 }
-    );
+      const response = await fetch(apiUrl.toString(), {
+        headers: {
+          Accept: "*/*",
+          "User-Agent": "Mozilla/5.0",
+        },
+      });
+
+      const rawData = await response.text();
+
+      results.push({
+        endpoint: endpoint.name,
+        httpStatus: response.status,
+        responsePreview: rawData.substring(0, 300),
+        isXml: rawData.includes("<?xml") || rawData.includes("<response>"),
+        hasResultCode: rawData.includes("<resultCode>"),
+      });
+
+      // 200이고 XML이면 성공 가능성
+      if (response.status === 200 && rawData.includes("<resultCode>")) {
+        const resultCodeMatch = rawData.match(/<resultCode>\s*(.+?)\s*<\/resultCode>/);
+        const resultCode = resultCodeMatch ? resultCodeMatch[1].trim() : "";
+        
+        if (resultCode === "00") {
+          // ✅ 성공! 이 엔드포인트 사용
+          const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+          const items = [...rawData.matchAll(itemRegex)];
+          
+          const routes = items.map((itemMatch) => {
+            const itemContent = itemMatch[1];
+            
+            const getTag = (tag: string) => {
+              const match = itemContent.match(new RegExp(`<${tag}>\\s*([^<]*)\\s*<\\/${tag}>`));
+              return match ? match[1].trim() : "";
+            };
+
+            return {
+              lineId: getTag("lineid"),
+              lineNo: getTag("lineno") || getTag("buslinenum"),
+              busType: getTag("bustype"),
+              companyId: getTag("companyid"),
+            };
+          });
+
+          return Response.json({ 
+            routes,
+            _debug: {
+              successEndpoint: endpoint.name,
+              itemCount: items.length
+            }
+          });
+        }
+      }
+
+    } catch (error: any) {
+      results.push({
+        endpoint: endpoint.name,
+        error: error.message,
+      });
+    }
   }
+
+  // 모든 시도 실패
+  return Response.json({
+    error: "모든 엔드포인트 시도 실패",
+    attempts: results,
+  }, { status: 502 });
 }
