@@ -17,8 +17,9 @@ export async function onRequest(context: any) {
   }
 
   try {
+    // ✅ BusanBIMS
     const apiUrl = new URL(
-      "https://apis.data.go.kr/6260000/BusanBmsService/stopArrByBstopid"
+      "https://apis.data.go.kr/6260000/BusanBIMS/stopArrByBstopid"
     );
     apiUrl.searchParams.set("serviceKey", serviceKey);
     apiUrl.searchParams.set("bstopid", stopId);
@@ -26,12 +27,19 @@ export async function onRequest(context: any) {
     const response = await fetch(apiUrl.toString());
     const rawData = await response.text();
 
-    const resultCodeMatch = rawData.match(/<resultCode>(.+?)<\/resultCode>/);
-    const resultCode = resultCodeMatch ? resultCodeMatch[1] : "";
+    if (rawData.includes("Unexpected errors")) {
+      return Response.json(
+        { error: "API 인증 실패", details: "Unexpected errors" },
+        { status: 401 }
+      );
+    }
+
+    const resultCodeMatch = rawData.match(/<resultCode>\s*(.+?)\s*<\/resultCode>/);
+    const resultCode = resultCodeMatch ? resultCodeMatch[1].trim() : "";
     
     if (resultCode !== "00") {
-      const resultMsgMatch = rawData.match(/<resultMsg>(.+?)<\/resultMsg>/);
-      const resultMsg = resultMsgMatch ? resultMsgMatch[1] : "Unknown error";
+      const resultMsgMatch = rawData.match(/<resultMsg>\s*(.+?)\s*<\/resultMsg>/);
+      const resultMsg = resultMsgMatch ? resultMsgMatch[1].trim() : "Unknown error";
       return Response.json(
         { error: "API 오류", code: resultCode, details: resultMsg },
         { status: 502 }
@@ -45,8 +53,8 @@ export async function onRequest(context: any) {
       const itemContent = itemMatch[1];
       
       const getTag = (tag: string) => {
-        const match = itemContent.match(new RegExp(`<${tag}>([^<]*)<\/${tag}>`));
-        return match ? match[1] : "";
+        const match = itemContent.match(new RegExp(`<${tag}>\\s*([^<]*)\\s*<\\/${tag}>`));
+        return match ? match[1].trim() : "";
       };
 
       return {

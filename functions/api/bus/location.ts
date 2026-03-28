@@ -17,9 +17,9 @@ export async function onRequest(context: any) {
   }
 
   try {
-    // ✅ 스크린샷의 "노선 위치정보 조회"
+    // ✅ BusanBIMS
     const apiUrl = new URL(
-      "https://apis.data.go.kr/6260000/BusanBIS/getBusInfoByRouteId"
+      "https://apis.data.go.kr/6260000/BusanBIMS/getBusInfoByRouteId"
     );
     apiUrl.searchParams.set("serviceKey", serviceKey);
     apiUrl.searchParams.set("lineid", lineId);
