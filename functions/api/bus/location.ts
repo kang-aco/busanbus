@@ -46,6 +46,7 @@ export async function onRequest(context: any) {
         const vehId = getTag(itemContent, "vehId") || getTag(itemContent, "carno");
         const plateNo = getTag(itemContent, "plateNo") || getTag(itemContent, "carno");
         const nodeId = getTag(itemContent, "nodeId") || getTag(itemContent, "nodeid");
+        const nodeNm = getTag(itemContent, "nodeNm") || getTag(itemContent, "bstopnm");
 
         if (!gpsX || !gpsY) return null;
 
@@ -53,6 +54,7 @@ export async function onRequest(context: any) {
           vehId: vehId || `${lineId}-${nodeId}-${plateNo}`,
           lineId,
           nodeId,
+          nodeNm,
           gpsX,
           gpsY,
           plateNo,
@@ -82,6 +84,7 @@ export async function onRequest(context: any) {
         const gpsX = getTag(itemContent, "lin") || getTag(itemContent, "gpsX");
         const gpsY = getTag(itemContent, "lat") || getTag(itemContent, "gpsY");
         const nodeId = getTag(itemContent, "nodeid") || getTag(itemContent, "nodeId");
+        const nodeNm = getTag(itemContent, "bstopnm") || getTag(itemContent, "nodeNm");
 
         if (!gpsX || !gpsY) return null;
 
@@ -89,6 +92,7 @@ export async function onRequest(context: any) {
           vehId: plateNo,
           lineId,
           nodeId,
+          nodeNm,
           gpsX,
           gpsY,
           plateNo,
