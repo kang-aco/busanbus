@@ -1,177 +1,155 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
-import { BusSearchPanel } from "@/components/bus/BusSearchPanel";
-import { RouteList } from "@/components/bus/RouteList";
-import { RouteDetailPanel } from "@/components/bus/RouteDetailPanel";
-import { ArrivalPanel } from "@/components/bus/ArrivalPanel";
-import { BusMap } from "@/components/bus/BusMap";
-import { ErrorBanner } from "@/components/common/ErrorBanner";
+import BusSearchPanel from "@/components/bus/BusSearchPanel";
+import RouteList from "@/components/bus/RouteList";
+import RouteDetailPanel from "@/components/bus/RouteDetailPanel";
+import ArrivalPanel from "@/components/bus/ArrivalPanel";
+import BusMap from "@/components/bus/BusMap";
+import StopSearchPanel from "@/components/bus/StopSearchPanel";
 import { useBusSearch } from "@/hooks/useBusSearch";
 import { useBusLocations } from "@/hooks/useBusLocations";
-import { useBusArrivals } from "@/hooks/useBusArrivals";
 import { useFavorites } from "@/hooks/useFavorites";
-import { useDebounce } from "@/hooks/useDebounce";
-import type { BusRoute } from "@/lib/bus-api/types";
 
-export default function Page() {
-  const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(null);
-  const [selectedStopId, setSelectedStopId] = useState<string>("");
+interface Route {
+  lineId: string;
+  lineNo: string;
+  busType: string;
+  companyId: string;
+}
 
-  const { searchQuery, setSearchQuery, routes, searchLoading, searchError, searchBus } =
-    useBusSearch();
-  const { locations, locationLoading, locationError } = useBusLocations(
-    selectedRoute?.lineId ?? null
-  );
+export default function Home() {
+  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
+  const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
+  const [selectedStopName, setSelectedStopName] = useState<string | null>(null);
+  const [showStopSearch, setShowStopSearch] = useState(false);
 
-  // Debounce로 타이핑 완료 후 API 호출
-  const debouncedStopId = useDebounce(selectedStopId.trim(), 800);
-  const { arrivals, arrivalLoading, arrivalError } = useBusArrivals(
-    debouncedStopId || null
-  );
+  const { routes, loading, error, searchBus } = useBusSearch();
+  const { locations: busLocations } = useBusLocations(selectedRoute?.lineId || null);
+  const { favorites, toggleFavorite } = useFavorites();
 
-  const {
-    favorites,
-    loading: favoritesLoading,
-    isFavorite,
-    addFavorite,
-    removeFavorite,
-  } = useFavorites();
-
-  const handleToggleFavorite = async (route: BusRoute, currentlyFavorite: boolean) => {
-    try {
-      if (currentlyFavorite) {
-        await removeFavorite(route.lineId);
-        toast.success(`${route.lineNo}번 즐겨찾기에서 제거되었습니다.`);
-      } else {
-        await addFavorite(route);
-        toast.success(`${route.lineNo}번이 즐겨찾기에 추가되었습니다.`);
-      }
-    } catch (error: any) {
-      toast.error(error?.message || "즐겨찾기 처리 중 오류가 발생했습니다.");
-    }
+  const handleSearch = (lineNo: string) => {
+    searchBus(lineNo);
+    setSelectedRoute(null);
   };
 
-  const handleStopIdChange = (value: string) => {
-    // 숫자만 허용
-    if (value && !/^\d*$/.test(value)) {
-      toast.error("정류소 ID는 숫자만 입력 가능합니다.");
-      return;
-    }
-    setSelectedStopId(value);
+  const handleRouteSelect = (route: Route) => {
+    setSelectedRoute(route);
+    setSelectedStopId(null);
+    setSelectedStopName(null);
+    setShowStopSearch(false);
+  };
+
+  const handleStopSelect = (stopId: string, stopName: string) => {
+    setSelectedStopId(stopId);
+    setSelectedStopName(stopName);
+    setShowStopSearch(false);
+    setSelectedRoute(null);
   };
 
   return (
-    <main className="mx-auto min-h-screen max-w-3xl space-y-4 bg-gray-50 p-4">
-      <header className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">부산 버스 라이브</h1>
-        <p className="mt-1 text-sm text-gray-600">
-          실시간 버스 위치 및 도착 정보를 확인하세요
-        </p>
-      </header>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto p-4">
+        <header className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">부산 버스 라이브</h1>
+          <p className="text-gray-600 mt-2">실시간 버스 위치 및 도착 정보를 확인하세요</p>
+        </header>
 
-      <BusSearchPanel
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        onSearch={searchBus}
-        loading={searchLoading}
-      />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* 왼쪽: 버스 노선 검색 */}
+          <div className="space-y-6">
+            <BusSearchPanel
+              onSearch={handleSearch}
+              onRouteSelect={handleRouteSelect}
+              routes={routes}
+              loading={loading}
+              error={error}
+            />
 
-      {/* 즐겨찾기 섹션 */}
-      {!favoritesLoading && favorites.length > 0 && (
-        <div className="rounded-3xl border bg-white p-4 shadow-sm">
-          <h2 className="mb-3 text-lg font-bold">⭐ 즐겨찾기</h2>
-          <div className="flex flex-wrap gap-2">
-            {favorites.map((fav) => (
-              <button
-                key={fav.lineId}
-                onClick={() => {
-                  setSearchQuery(fav.lineNo);
-                  searchBus(fav.lineNo);
-                }}
-                className="rounded-full bg-yellow-50 border border-yellow-200 px-3 py-1 text-sm text-yellow-700 hover:bg-yellow-100 transition"
-              >
-                {fav.lineNo}번
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+            {routes.length > 0 && !selectedRoute && (
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <RouteList
+                  routes={routes}
+                  onRouteSelect={handleRouteSelect}
+                  favorites={favorites}
+                  onToggleFavorite={toggleFavorite}
+                />
+              </div>
+            )}
 
-      {/* 에러 메시지 - 개별 표시 */}
-      {searchError && <ErrorBanner message={`검색 실패: ${searchError}`} />}
-      {locationError && <ErrorBanner message={`위치 조회 실패: ${locationError}`} />}
-      {arrivalError && <ErrorBanner message={`도착 정보 실패: ${arrivalError}`} />}
-
-      {/* 검색 결과 */}
-      {searchLoading ? (
-        <div
-          className="rounded-3xl border bg-white p-10 text-center shadow-sm"
-          role="status"
-          aria-live="polite"
-        >
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
-          <p className="mt-4 text-gray-500">노선 검색 중...</p>
-        </div>
-      ) : (
-        routes.length > 0 && (
-          <RouteList
-            routes={routes}
-            selectedRouteId={selectedRoute?.lineId ?? null}
-            onSelect={(route) => {
-              setSelectedRoute(route);
-              setSelectedStopId("");
-            }}
-            isFavorite={isFavorite}
-            onToggleFavorite={handleToggleFavorite}
-          />
-        )
-      )}
-
-      {/* 선택된 노선의 실시간 정보 */}
-      {selectedRoute && (
-        <>
-          {locationLoading && (
-            <div className="rounded-3xl border bg-white p-4 text-center shadow-sm">
-              <p className="text-sm text-gray-500">버스 위치 불러오는 중...</p>
-            </div>
-          )}
-
-          <RouteDetailPanel route={selectedRoute} locations={locations} />
-
-          {/* Google Maps */}
-          {locations.length > 0 && <BusMap locations={locations} />}
-
-          {/* 도착 정보 조회 */}
-          <div className="rounded-3xl border bg-white p-4 shadow-sm">
-            <h2 className="mb-3 text-lg font-bold">🚏 정류소 도착 정보</h2>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={selectedStopId}
-                onChange={(e) => handleStopIdChange(e.target.value)}
-                placeholder="정류소 ID 입력 (예: 123456)"
-                className="flex-1 rounded-2xl border px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
-                aria-label="정류소 ID 입력"
+            {selectedRoute && (
+              <RouteDetailPanel
+                route={selectedRoute}
+                onBack={() => setSelectedRoute(null)}
               />
-            </div>
-            {debouncedStopId && debouncedStopId !== selectedStopId && (
-              <p className="mt-2 text-xs text-gray-400">입력 대기 중...</p>
             )}
           </div>
 
-          {arrivalLoading && (
-            <div className="rounded-3xl border bg-white p-4 text-center shadow-sm">
-              <p className="text-sm text-gray-500">도착 정보 불러오는 중...</p>
-            </div>
-          )}
+          {/* 오른쪽: 정류소 검색 + 도착 정보 + 지도 */}
+          <div className="space-y-6">
+            {/* 정류소 검색 토글 버튼 */}
+            <button
+              onClick={() => setShowStopSearch(!showStopSearch)}
+              className="w-full p-4 bg-white border-2 border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 font-medium transition-colors"
+            >
+              {showStopSearch ? "정류소 검색 닫기" : "🚏 정류소 이름으로 도착 정보 검색"}
+            </button>
 
-          {debouncedStopId && <ArrivalPanel arrivals={arrivals} />}
-        </>
-      )}
-    </main>
+            {/* 정류소 검색 패널 */}
+            {showStopSearch && (
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-bold mb-4">정류소 검색</h2>
+                <StopSearchPanel onStopSelect={handleStopSelect} />
+              </div>
+            )}
+
+            {/* 선택된 정류소 도착 정보 */}
+            {selectedStopId && selectedStopName && (
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold">🚏 {selectedStopName}</h2>
+                  <button
+                    onClick={() => {
+                      setSelectedStopId(null);
+                      setSelectedStopName(null);
+                    }}
+                    className="text-gray-500 hover:text-gray-700 px-3 py-1 rounded hover:bg-gray-100"
+                  >
+                    닫기
+                  </button>
+                </div>
+                <ArrivalPanel stopId={selectedStopId} />
+              </div>
+            )}
+
+            {/* 실시간 버스 위치 지도 */}
+            {selectedRoute && busLocations.length > 0 && (
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-bold mb-4">
+                  🚌 {selectedRoute.lineNo}번 실시간 위치
+                </h2>
+                <BusMap
+                  locations={busLocations}
+                  lineNo={selectedRoute.lineNo}
+                />
+              </div>
+            )}
+
+            {/* 버스 위치 없음 안내 */}
+            {selectedRoute && busLocations.length === 0 && (
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h2 className="text-xl font-bold mb-4">
+                  🚌 {selectedRoute.lineNo}번 실시간 위치
+                </h2>
+                <div className="text-center py-8 text-gray-500">
+                  <p>현재 운행 중인 버스가 없습니다.</p>
+                  <p className="text-sm mt-2">운행 시간을 확인해주세요.</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
