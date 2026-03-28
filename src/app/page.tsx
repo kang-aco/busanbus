@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { BusSearchPanel } from "@/components/bus/BusSearchPanel";
-import { RouteList } from "@/components/bus/RouteList";
-import { RouteDetailPanel } from "@/components/bus/RouteDetailPanel";
-import { ArrivalPanel } from "@/components/bus/ArrivalPanel";
-import { BusMap } from "@/components/bus/BusMap";
-import { StopSearchPanel } from "@/components/bus/StopSearchPanel";
+import BusSearchPanel from "@/components/bus/BusSearchPanel";
+import RouteList from "@/components/bus/RouteList";
+import RouteDetailPanel from "@/components/bus/RouteDetailPanel";
+import ArrivalPanel from "@/components/bus/ArrivalPanel";
+import BusMap from "@/components/bus/BusMap";
+import StopSearchPanel from "@/components/bus/StopSearchPanel";
 import { useBusSearch } from "@/hooks/useBusSearch";
 import { useBusLocations } from "@/hooks/useBusLocations";
 import { useFavorites } from "@/hooks/useFavorites";
