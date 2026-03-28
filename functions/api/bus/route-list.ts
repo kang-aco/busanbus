@@ -16,92 +16,62 @@ export async function onRequest(context: any) {
     );
   }
 
-  // 🔍 여러 엔드포인트 시도
-  const endpoints = [
-    { name: "busInfo", params: { lineno: lineNo } },
-    { name: "getBusRouteList", params: { lineno: lineNo } },
-    { name: "getRouteList", params: { lineno: lineNo } },
-    { name: "busRouteList", params: { lineno: lineNo } },
-    { name: "getRouteInfo", params: { lineno: lineNo } },
-  ];
+  try {
+    // ✅ 올바른 엔드포인트: busInfo
+    const apiUrl = new URL(
+      "https://apis.data.go.kr/6260000/BusanBIMS/busInfo"
+    );
+    apiUrl.searchParams.set("serviceKey", serviceKey);
+    apiUrl.searchParams.set("lineno", lineNo);
 
-  const results: any[] = [];
+    const response = await fetch(apiUrl.toString(), {
+      headers: {
+        Accept: "*/*",
+        "User-Agent": "Mozilla/5.0",
+      },
+    });
 
-  for (const endpoint of endpoints) {
-    try {
-      const apiUrl = new URL(
-        `https://apis.data.go.kr/6260000/BusanBIMS/${endpoint.name}`
+    const rawData = await response.text();
+
+    // resultCode 확인
+    const resultCodeMatch = rawData.match(/<resultCode>\s*(.+?)\s*<\/resultCode>/);
+    const resultCode = resultCodeMatch ? resultCodeMatch[1].trim() : "";
+
+    if (resultCode !== "00") {
+      const resultMsgMatch = rawData.match(/<resultMsg>\s*(.+?)\s*<\/resultMsg>/);
+      const resultMsg = resultMsgMatch ? resultMsgMatch[1].trim() : "Unknown error";
+      return Response.json(
+        { error: "API 오류", code: resultCode, details: resultMsg },
+        { status: 502 }
       );
-      apiUrl.searchParams.set("serviceKey", serviceKey);
-      
-      for (const [key, value] of Object.entries(endpoint.params)) {
-        apiUrl.searchParams.set(key, String(value));
-      }
-
-      const response = await fetch(apiUrl.toString(), {
-        headers: {
-          Accept: "*/*",
-          "User-Agent": "Mozilla/5.0",
-        },
-      });
-
-      const rawData = await response.text();
-
-      results.push({
-        endpoint: endpoint.name,
-        httpStatus: response.status,
-        responsePreview: rawData.substring(0, 300),
-        isXml: rawData.includes("<?xml") || rawData.includes("<response>"),
-        hasResultCode: rawData.includes("<resultCode>"),
-      });
-
-      // 200이고 XML이면 성공 가능성
-      if (response.status === 200 && rawData.includes("<resultCode>")) {
-        const resultCodeMatch = rawData.match(/<resultCode>\s*(.+?)\s*<\/resultCode>/);
-        const resultCode = resultCodeMatch ? resultCodeMatch[1].trim() : "";
-        
-        if (resultCode === "00") {
-          // ✅ 성공! 이 엔드포인트 사용
-          const itemRegex = /<item>([\s\S]*?)<\/item>/g;
-          const items = [...rawData.matchAll(itemRegex)];
-          
-          const routes = items.map((itemMatch) => {
-            const itemContent = itemMatch[1];
-            
-            const getTag = (tag: string) => {
-              const match = itemContent.match(new RegExp(`<${tag}>\\s*([^<]*)\\s*<\\/${tag}>`));
-              return match ? match[1].trim() : "";
-            };
-
-            return {
-              lineId: getTag("lineid"),
-              lineNo: getTag("lineno") || getTag("buslinenum"),
-              busType: getTag("bustype"),
-              companyId: getTag("companyid"),
-            };
-          });
-
-          return Response.json({ 
-            routes,
-            _debug: {
-              successEndpoint: endpoint.name,
-              itemCount: items.length
-            }
-          });
-        }
-      }
-
-    } catch (error: any) {
-      results.push({
-        endpoint: endpoint.name,
-        error: error.message,
-      });
     }
-  }
 
-  // 모든 시도 실패
-  return Response.json({
-    error: "모든 엔드포인트 시도 실패",
-    attempts: results,
-  }, { status: 502 });
+    // <item> 태그들 추출
+    const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+    const items = [...rawData.matchAll(itemRegex)];
+    
+    const routes = items.map((itemMatch) => {
+      const itemContent = itemMatch[1];
+      
+      const getTag = (tag: string) => {
+        const match = itemContent.match(new RegExp(`<${tag}>\\s*([^<]*)\\s*<\\/${tag}>`));
+        return match ? match[1].trim() : "";
+      };
+
+      return {
+        lineId: getTag("lineid"),
+        lineNo: getTag("lineno"),
+        busType: getTag("bustype"),
+        companyId: getTag("companyid"),
+      };
+    });
+
+    return Response.json({ routes });
+  } catch (error: any) {
+    console.error("[Route List Error]:", error.message);
+    return Response.json(
+      { error: "노선 조회 실패", details: error.message },
+      { status: 500 }
+    );
+  }
 }

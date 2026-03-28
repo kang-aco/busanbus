@@ -16,69 +16,69 @@ export async function onRequest(context: any) {
     );
   }
 
-  try {
-    // ✅ BusanBIMS
-    const apiUrl = new URL(
-      "https://apis.data.go.kr/6260000/BusanBIMS/getBusInfoByRouteId"
-    );
-    apiUrl.searchParams.set("serviceKey", serviceKey);
-    apiUrl.searchParams.set("lineid", lineId);
+  // 🔍 여러 엔드포인트 시도
+  const endpoints = [
+    { name: "busInfoByRouteId", params: { lineid: lineId } },
+    { name: "getBusInfoByRouteId", params: { lineid: lineId } },
+    { name: "busLocationByRouteId", params: { lineid: lineId } },
+  ];
 
-    const response = await fetch(apiUrl.toString());
-    const rawData = await response.text();
-
-    if (rawData.includes("Unexpected errors")) {
-      return Response.json(
-        { error: "API 인증 실패", details: "Unexpected errors" },
-        { status: 401 }
+  for (const endpoint of endpoints) {
+    try {
+      const apiUrl = new URL(
+        `https://apis.data.go.kr/6260000/BusanBIMS/${endpoint.name}`
       );
-    }
-
-    const resultCodeMatch = rawData.match(/<resultCode>\s*(.+?)\s*<\/resultCode>/);
-    const resultCode = resultCodeMatch ? resultCodeMatch[1].trim() : "";
-    
-    if (resultCode !== "00") {
-      const resultMsgMatch = rawData.match(/<resultMsg>\s*(.+?)\s*<\/resultMsg>/);
-      const resultMsg = resultMsgMatch ? resultMsgMatch[1].trim() : "Unknown error";
-      return Response.json(
-        { error: "API 오류", code: resultCode, details: resultMsg },
-        { status: 502 }
-      );
-    }
-
-    const itemRegex = /<item>([\s\S]*?)<\/item>/g;
-    const items = [...rawData.matchAll(itemRegex)];
-    
-    const locations = items.map((itemMatch) => {
-      const itemContent = itemMatch[1];
+      apiUrl.searchParams.set("serviceKey", serviceKey);
       
-      const getTag = (tag: string) => {
-        const match = itemContent.match(new RegExp(`<${tag}>\\s*([^<]*)\\s*<\\/${tag}>`));
-        return match ? match[1].trim() : "";
-      };
+      for (const [key, value] of Object.entries(endpoint.params)) {
+        apiUrl.searchParams.set(key, String(value));
+      }
 
-      const nodeId = getTag("nodeid");
-      const plateNo = getTag("carno");
-      const lineIdVal = getTag("lineid");
+      const response = await fetch(apiUrl.toString());
+      const rawData = await response.text();
 
-      return {
-        vehId: `${lineIdVal}-${nodeId}-${plateNo}`,
-        lineId: lineIdVal,
-        lineNo: getTag("lineno"),
-        nodeId,
-        nodeNm: getTag("nodenm"),
-        gpsX: getTag("gpsx"),
-        gpsY: getTag("gpsy"),
-        plateNo,
-      };
-    });
+      if (response.status === 200 && rawData.includes("<resultCode>")) {
+        const resultCodeMatch = rawData.match(/<resultCode>\s*(.+?)\s*<\/resultCode>/);
+        const resultCode = resultCodeMatch ? resultCodeMatch[1].trim() : "";
+        
+        if (resultCode === "00") {
+          const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+          const items = [...rawData.matchAll(itemRegex)];
+          
+          const locations = items.map((itemMatch) => {
+            const itemContent = itemMatch[1];
+            
+            const getTag = (tag: string) => {
+              const match = itemContent.match(new RegExp(`<${tag}>\\s*([^<]*)\\s*<\\/${tag}>`));
+              return match ? match[1].trim() : "";
+            };
 
-    return Response.json({ locations });
-  } catch (error: any) {
-    console.error("[Location Error]:", error.message);
-    return Response.json(
-      { error: "위치 조회 실패", details: error.message },
-      { status: 500 }
-    );
+            const nodeId = getTag("nodeid");
+            const plateNo = getTag("carno");
+            const lineIdVal = getTag("lineid");
+
+            return {
+              vehId: `${lineIdVal}-${nodeId}-${plateNo}`,
+              lineId: lineIdVal,
+              lineNo: getTag("lineno"),
+              nodeId,
+              nodeNm: getTag("nodenm"),
+              gpsX: getTag("gpsx"),
+              gpsY: getTag("gpsy"),
+              plateNo,
+            };
+          });
+
+          return Response.json({ locations });
+        }
+      }
+    } catch (error) {
+      continue;
+    }
   }
+
+  return Response.json(
+    { error: "위치 조회 실패", details: "모든 엔드포인트 시도 실패" },
+    { status: 502 }
+  );
 }
