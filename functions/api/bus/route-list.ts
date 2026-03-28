@@ -31,14 +31,32 @@ export async function onRequest(context: any) {
     });
 
     const rawData = await response.text();
+    
+    // 디버깅: 응답 일부 로그
+    console.log("[Route List] Response preview:", rawData.substring(0, 500));
 
-    // resultCode 확인 (간단한 정규식)
-    const resultCodeMatch = rawData.match(/<resultCode>(.+?)<\/resultCode>/);
-    const resultCode = resultCodeMatch ? resultCodeMatch[1] : "";
+    // resultCode 확인 (더 유연한 정규식)
+    const resultCodeMatch = rawData.match(/<resultCode>\s*(.+?)\s*<\/resultCode>/);
+    const resultCode = resultCodeMatch ? resultCodeMatch[1].trim() : "";
+    
+    console.log("[Route List] resultCode:", resultCode);
+    
+    // resultCode가 비어있거나 00이 아니면 에러
+    if (!resultCode) {
+      // resultCode를 찾지 못함 - 원본 응답 반환
+      return Response.json(
+        { 
+          error: "API 응답 파싱 실패", 
+          details: "resultCode를 찾을 수 없습니다.",
+          preview: rawData.substring(0, 500)
+        },
+        { status: 502 }
+      );
+    }
     
     if (resultCode !== "00") {
-      const resultMsgMatch = rawData.match(/<resultMsg>(.+?)<\/resultMsg>/);
-      const resultMsg = resultMsgMatch ? resultMsgMatch[1] : "Unknown error";
+      const resultMsgMatch = rawData.match(/<resultMsg>\s*(.+?)\s*<\/resultMsg>/);
+      const resultMsg = resultMsgMatch ? resultMsgMatch[1].trim() : "Unknown error";
       return Response.json(
         { error: "API 오류", code: resultCode, details: resultMsg },
         { status: 502 }
@@ -49,12 +67,14 @@ export async function onRequest(context: any) {
     const itemRegex = /<item>([\s\S]*?)<\/item>/g;
     const items = [...rawData.matchAll(itemRegex)];
     
+    console.log("[Route List] Found items:", items.length);
+    
     const routes = items.map((itemMatch) => {
       const itemContent = itemMatch[1];
       
       const getTag = (tag: string) => {
-        const match = itemContent.match(new RegExp(`<${tag}>([^<]*)<\/${tag}>`));
-        return match ? match[1] : "";
+        const match = itemContent.match(new RegExp(`<${tag}>\\s*([^<]*)\\s*<\\/${tag}>`));
+        return match ? match[1].trim() : "";
       };
 
       return {
@@ -65,9 +85,11 @@ export async function onRequest(context: any) {
       };
     });
 
+    console.log("[Route List] Parsed routes:", JSON.stringify(routes));
+
     return Response.json({ routes });
   } catch (error: any) {
-    console.error("[Route List Error]:", error.message);
+    console.error("[Route List Error]:", error.message, error.stack);
     return Response.json(
       { error: "노선 조회 실패", details: error.message },
       { status: 500 }
