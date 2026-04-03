@@ -23,12 +23,13 @@ export default function StopSearchPanel({ onStopSelect }: StopSearchPanelProps) 
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
-
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(`/api/bus/stops?stopName=${encodeURIComponent(searchQuery)}`);
+      const response = await fetch(
+        `/api/bus/stops?stopName=${encodeURIComponent(searchQuery)}`
+      );
       const data = await response.json();
 
       if (!response.ok) {
@@ -47,75 +48,86 @@ export default function StopSearchPanel({ onStopSelect }: StopSearchPanelProps) 
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleSearch();
-    }
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") handleSearch();
   };
 
   return (
-    <div className="space-y-4">
-      {/* 검색 입력 */}
+    <div className="flex flex-col gap-3">
+      {/* Search input */}
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyDown}
             placeholder="정류소 이름 검색 (예: 부산역)"
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="glass-input w-full pl-10 pr-4 py-3 text-sm"
+            aria-label="정류소 이름 검색"
           />
         </div>
         <button
           onClick={handleSearch}
           disabled={loading || !searchQuery.trim()}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="btn-primary px-4 py-3 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {loading ? (
-            <>
-              <Loader2 className="h-5 w-5 animate-spin" />
-              검색중
-            </>
+            <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
-            "검색"
+            <Search className="w-4 h-4" />
           )}
+          <span className="text-sm hidden sm:inline">
+            {loading ? "검색중" : "검색"}
+          </span>
         </button>
       </div>
 
-      {/* 에러 메시지 */}
+      {/* Error */}
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-          {error}
+        <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+          <p className="text-sm text-red-400">{error}</p>
         </div>
       )}
 
-      {/* 검색 결과 */}
+      {/* Results */}
       {stops.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-sm text-gray-600">
-            {stops.length}개의 정류소를 찾았습니다
+        <div className="flex flex-col gap-2">
+          <p className="text-xs text-slate-500 px-1">
+            {stops.length}개의 정류소
           </p>
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {stops.map((stop) => (
+          <div className="flex flex-col gap-2 max-h-80 overflow-y-auto pr-1">
+            {stops.map((stop, idx) => (
               <button
                 key={stop.stopId}
                 onClick={() => onStopSelect(stop.stopId, stop.stopName)}
-                className="w-full p-4 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors text-left"
+                className="glass-card hover:bg-white/8 hover:border-white/20 text-left transition-all animate-slide-up group"
+                style={{ animationDelay: `${idx * 40}ms`, animationFillMode: "both" }}
+                aria-label={`${stop.stopName} 정류소 선택`}
               >
-                <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[#0066ff]/15 flex items-center justify-center flex-shrink-0 group-hover:bg-[#0066ff]/25 transition-colors">
+                    <MapPin className="w-4 h-4 text-[#4d94ff]" />
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900">{stop.stopName}</p>
-                    <p className="text-sm text-gray-500">
-                      정류소 번호: {stop.arsno || stop.stopId}
+                    <p className="text-sm font-medium text-white truncate">{stop.stopName}</p>
+                    <p className="text-xs text-slate-500">
+                      번호: {stop.arsno || stop.stopId}
                     </p>
                   </div>
                 </div>
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!loading && stops.length === 0 && !error && (
+        <div className="flex flex-col items-center gap-2 py-10 text-slate-600">
+          <MapPin className="w-8 h-8" />
+          <p className="text-sm">정류소 이름을 입력하고 검색하세요</p>
         </div>
       )}
     </div>

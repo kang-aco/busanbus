@@ -132,18 +132,27 @@ async function startServer() {
 
       console.log(`[Directions] Searching route: ${origin} -> ${destination}`);
 
+      const travelMode = getFirstQueryValue(req.query.mode) || "transit";
+      const validModes = ["transit", "driving", "bicycling", "walking"];
+      const safeMode = validModes.includes(travelMode) ? travelMode : "transit";
+
+      const directionsParams: Record<string, string> = {
+        origin,
+        destination,
+        mode: safeMode,
+        key: MAPS_KEY,
+        language: "ko",
+        region: "kr",
+      };
+
+      if (safeMode === "transit") {
+        directionsParams.transit_mode = "bus|subway";
+      }
+
       const response = await axios.get(
         "https://maps.googleapis.com/maps/api/directions/json",
         {
-          params: {
-            origin,
-            destination,
-            mode: "transit",
-            transit_mode: "bus|subway",
-            key: MAPS_KEY,
-            language: "ko",
-            region: "kr",
-          },
+          params: directionsParams,
           timeout: 15000,
         }
       );

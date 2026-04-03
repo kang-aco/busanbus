@@ -1,6 +1,6 @@
 "use client";
 
-import { Star } from "lucide-react";
+import { Star, Bus } from "lucide-react";
 import type { BusRoute } from "@/lib/bus-api/types";
 
 export default function RouteList({
@@ -17,19 +17,24 @@ export default function RouteList({
   onToggleFavorite?: (route: BusRoute, currentlyFavorite: boolean) => void;
 }) {
   return (
-    <div className="space-y-3">
-      {routes.map((route) => {
+    <div className="flex flex-col gap-2" role="list">
+      {routes.map((route, idx) => {
         const isSelected = selectedRouteId === route.lineId;
         const favorite = isFavorite?.(route.lineId) ?? false;
 
         return (
           <div
             key={route.lineId || route.lineNo}
-            className={`flex items-center gap-2 rounded-3xl border p-4 shadow-sm transition ${
-              isSelected ? "border-blue-500 bg-blue-50" : "bg-white"
-            }`}
+            className="animate-slide-up"
+            style={{ animationDelay: `${idx * 40}ms`, animationFillMode: "both" }}
+            role="listitem"
           >
-            <button
+            <div
+              className={`flex items-center gap-3 rounded-2xl border p-4 transition-all cursor-pointer ${
+                isSelected
+                  ? "gradient-border bg-[#141b3d] neon-glow-blue"
+                  : "glass-card hover:bg-white/8 hover:border-white/20"
+              }`}
               onClick={() => onSelect(route)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
@@ -37,39 +42,55 @@ export default function RouteList({
                   onSelect(route);
                 }
               }}
-              className="flex-1 text-left"
-              aria-label={`${route.lineNo}번 버스 선택`}
+              tabIndex={0}
+              role="button"
               aria-pressed={isSelected}
+              aria-label={`${route.lineNo}번 버스 선택`}
             >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-lg font-bold">{route.lineNo}</p>
-                  <p className="text-xs text-gray-500">노선 ID: {route.lineId}</p>
-                </div>
-                <span className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-600">
-                  {route.busType || "일반"}
-                </span>
-              </div>
-            </button>
-
-            {onToggleFavorite && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleFavorite(route, favorite);
-                }}
-                className="rounded-full p-2 hover:bg-gray-100 transition"
-                aria-label={
-                  favorite ? `${route.lineNo}번 즐겨찾기 해제` : `${route.lineNo}번 즐겨찾기 추가`
-                }
+              {/* Bus icon */}
+              <div
+                className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${
+                  isSelected ? "bg-[#0066ff]/30" : "bg-white/8"
+                }`}
               >
-                <Star
-                  className={`h-5 w-5 ${
-                    favorite ? "fill-yellow-400 text-yellow-400" : "text-gray-400"
-                  }`}
-                />
-              </button>
-            )}
+                <Bus className={`w-5 h-5 ${isSelected ? "text-[#4d94ff]" : "text-slate-400"}`} />
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <p className={`text-base font-bold ${isSelected ? "text-white" : "text-slate-100"}`}>
+                  {route.lineNo}번
+                </p>
+                <p className="text-xs text-slate-500 truncate">ID: {route.lineId}</p>
+              </div>
+
+              {/* Bus type badge */}
+              <span
+                className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
+                  isSelected
+                    ? "bg-[#0066ff]/20 text-[#4d94ff]"
+                    : "bg-white/8 text-slate-400"
+                }`}
+              >
+                {route.busType || "일반"}
+              </span>
+
+              {/* Favorite */}
+              {onToggleFavorite && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleFavorite(route, favorite);
+                  }}
+                  className="p-1 rounded-lg hover:bg-white/10 transition-colors flex-shrink-0"
+                  aria-label={favorite ? `${route.lineNo}번 즐겨찾기 해제` : `${route.lineNo}번 즐겨찾기 추가`}
+                >
+                  <Star
+                    className={`w-4 h-4 ${favorite ? "fill-amber-400 text-amber-400" : "text-slate-600"}`}
+                  />
+                </button>
+              )}
+            </div>
           </div>
         );
       })}

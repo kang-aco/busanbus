@@ -50,9 +50,21 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
 
 export default function App() {
   return (
-    <ErrorBoundary>
-      <Page />
-      <Toaster position="top-center" />
-    </ErrorBoundary>
+    <div className="h-full">
+      <ErrorBoundary>
+        <Page />
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            style: {
+              background: "rgba(20, 27, 61, 0.95)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              color: "white",
+              backdropFilter: "blur(20px)",
+            },
+          }}
+        />
+      </ErrorBoundary>
+    </div>
   );
 }
