@@ -7,6 +7,7 @@ export function useBusLocations(lineId: string | null) {
   const [locations, setLocations] = useState<BusLocation[]>([]);
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const requestIdRef = useRef(0);
 
   const fetchLocations = useCallback(async () => {
@@ -34,6 +35,7 @@ export function useBusLocations(lineId: string | null) {
         setLocations((prev) =>
           JSON.stringify(prev) === JSON.stringify(list) ? prev : list
         );
+        setLastUpdated(new Date());
       }
     } catch (err: any) {
       console.error("[Location Error]:", err);
@@ -51,6 +53,7 @@ export function useBusLocations(lineId: string | null) {
   useEffect(() => {
     if (!lineId) {
       setLocations([]);
+      setLastUpdated(null);
       return;
     }
 
@@ -63,6 +66,7 @@ export function useBusLocations(lineId: string | null) {
     locations,
     locationLoading,
     locationError,
+    lastUpdated,
     refreshLocations: fetchLocations,
   };
 }

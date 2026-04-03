@@ -16,6 +16,7 @@ import { onRequest as handleMapsKey } from "./functions/api/maps-key";
 import { onRequest as handleRouteList } from "./functions/api/bus/route-list";
 import { onRequest as handleLocation } from "./functions/api/bus/location";
 import { onRequest as handleArrival } from "./functions/api/bus/arrival";
+import { onRequest as handleStops } from "./functions/api/bus/stops";
 
 dotenv.config();
 
@@ -66,6 +67,8 @@ async function startServer() {
   app.get("/api/bus/location", adaptOnRequest(handleLocation));
 
   app.get("/api/bus/arrival", adaptOnRequest(handleArrival));
+
+  app.get("/api/bus/stops", adaptOnRequest(handleStops));
 
   app.get("/api/bus/debug", async (req, res) => {
     try {

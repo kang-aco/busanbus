@@ -16,6 +16,17 @@ export default defineConfig(({mode}) => {
       },
     },
     publicDir: 'public',
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'vendor-react': ['react', 'react-dom'],
+            'vendor-motion': ['motion'],
+            'vendor-maps': ['@react-google-maps/api'],
+          },
+        },
+      },
+    },
     server: {
       hmr: process.env.DISABLE_HMR !== 'true',
     },
