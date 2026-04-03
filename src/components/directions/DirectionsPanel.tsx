@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode, FormEvent } from "react";
 import { useState } from "react";
 import {
   ArrowRight,
@@ -18,7 +19,7 @@ import {
 import { useDirections, type TransportMode } from "@/hooks/useDirections";
 import GlassCard from "@/components/ui/GlassCard";
 
-const MODES: { id: TransportMode; label: string; icon: React.ReactNode }[] = [
+const MODES: { id: TransportMode; label: string; icon: ReactNode }[] = [
   { id: "transit", label: "대중교통", icon: <Bus className="w-4 h-4" /> },
   { id: "driving", label: "승용차", icon: <Car className="w-4 h-4" /> },
   { id: "bicycling", label: "자전거", icon: <Bike className="w-4 h-4" /> },
@@ -32,7 +33,7 @@ const STEP_MODE_COLORS: Record<string, string> = {
   BICYCLING: "text-green-400",
 };
 
-const STEP_MODE_ICONS: Record<string, React.ReactNode> = {
+const STEP_MODE_ICONS: Record<string, ReactNode> = {
   TRANSIT: <Bus className="w-3.5 h-3.5" />,
   WALKING: <Footprints className="w-3.5 h-3.5" />,
   DRIVING: <Car className="w-3.5 h-3.5" />,
@@ -45,7 +46,7 @@ export default function DirectionsPanel() {
   const [mode, setMode] = useState<TransportMode>("transit");
   const { loading, error, result, search, reset } = useDirections();
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = (e: FormEvent) => {
     e.preventDefault();
     search(origin, destination, mode);
   };
