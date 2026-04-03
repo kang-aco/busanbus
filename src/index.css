@@ -1,7 +1,195 @@
 @import "tailwindcss";
 
 @layer base {
-  .dark {
-    color-scheme: dark;
+  :root {
+    --color-primary: #0066ff;
+    --color-primary-light: #4d94ff;
+    --color-accent: #00ff88;
+    --color-accent-dim: rgba(0, 255, 136, 0.15);
+    --color-space-900: #0a0e27;
+    --color-space-800: #141b3d;
+    --color-space-700: #1f294d;
+    --color-space-600: #2a3560;
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    background-color: var(--color-space-900);
+    color: #ffffff;
+    font-family:
+      "Inter",
+      -apple-system,
+      "Malgun Gothic",
+      "Apple SD Gothic Neo",
+      system-ui,
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+}
+
+@layer components {
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 1.25rem;
+  }
+
+  .glass-input {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 0.75rem;
+    color: white;
+    transition:
+      border-color 0.2s,
+      background 0.2s;
+  }
+
+  .glass-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    background: rgba(0, 102, 255, 0.08);
+  }
+
+  .glass-input::placeholder {
+    color: rgba(255, 255, 255, 0.35);
+  }
+
+  .btn-primary {
+    background: linear-gradient(
+      135deg,
+      var(--color-primary) 0%,
+      var(--color-primary-light) 100%
+    );
+    color: white;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    transition: opacity 0.2s, transform 0.1s;
+  }
+
+  .btn-primary:hover {
+    opacity: 0.9;
+  }
+
+  .btn-primary:active {
+    transform: scale(0.97);
+  }
+
+  .neon-glow-blue {
+    box-shadow: 0 0 20px rgba(0, 102, 255, 0.35);
+  }
+
+  .neon-glow-green {
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.35);
+  }
+
+  .pulse-dot {
+    animation: pulse-ring 2s ease-in-out infinite;
+  }
+
+  .gradient-border {
+    background: linear-gradient(var(--color-space-800), var(--color-space-800))
+        padding-box,
+      linear-gradient(135deg, var(--color-primary), var(--color-accent))
+        border-box;
+    border: 1px solid transparent;
+  }
+
+  .font-mono {
+    font-family: "Roboto Mono", "Consolas", monospace;
+  }
+}
+
+@layer utilities {
+  .bg-space-900 {
+    background-color: var(--color-space-900);
+  }
+  .bg-space-800 {
+    background-color: var(--color-space-800);
+  }
+  .bg-space-700 {
+    background-color: var(--color-space-700);
+  }
+  .text-primary {
+    color: var(--color-primary);
+  }
+  .text-accent {
+    color: var(--color-accent);
+  }
+  .border-primary {
+    border-color: var(--color-primary);
+  }
+  .border-accent {
+    border-color: var(--color-accent);
+  }
+  .bg-primary {
+    background-color: var(--color-primary);
+  }
+  .bg-accent {
+    background-color: var(--color-accent);
+  }
+}
+
+@keyframes pulse-ring {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 0.6;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }

@@ -16,6 +16,7 @@ import { onRequest as handleMapsKey } from "./functions/api/maps-key";
 import { onRequest as handleRouteList } from "./functions/api/bus/route-list";
 import { onRequest as handleLocation } from "./functions/api/bus/location";
 import { onRequest as handleArrival } from "./functions/api/bus/arrival";
+import { onRequest as handleStops } from "./functions/api/bus/stops";
 
 dotenv.config();
 
@@ -66,6 +67,8 @@ async function startServer() {
   app.get("/api/bus/location", adaptOnRequest(handleLocation));
 
   app.get("/api/bus/arrival", adaptOnRequest(handleArrival));
+
+  app.get("/api/bus/stops", adaptOnRequest(handleStops));
 
   app.get("/api/bus/debug", async (req, res) => {
     try {
@@ -132,18 +135,27 @@ async function startServer() {
 
       console.log(`[Directions] Searching route: ${origin} -> ${destination}`);
 
+      const travelMode = getFirstQueryValue(req.query.mode) || "transit";
+      const validModes = ["transit", "driving", "bicycling", "walking"];
+      const safeMode = validModes.includes(travelMode) ? travelMode : "transit";
+
+      const directionsParams: Record<string, string> = {
+        origin,
+        destination,
+        mode: safeMode,
+        key: MAPS_KEY,
+        language: "ko",
+        region: "kr",
+      };
+
+      if (safeMode === "transit") {
+        directionsParams.transit_mode = "bus|subway";
+      }
+
       const response = await axios.get(
         "https://maps.googleapis.com/maps/api/directions/json",
         {
-          params: {
-            origin,
-            destination,
-            mode: "transit",
-            transit_mode: "bus|subway",
-            key: MAPS_KEY,
-            language: "ko",
-            region: "kr",
-          },
+          params: directionsParams,
           timeout: 15000,
         }
       );

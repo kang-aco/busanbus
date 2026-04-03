@@ -31,15 +31,20 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
         // Not a JSON error
       }
       return (
-        <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
-          <h2 className="text-2xl font-bold mb-4">앗! 오류가 발생했습니다.</h2>
-          <p className="text-gray-600 mb-6">{errorMessage}</p>
-          <button 
-            onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg"
-          >
-            새로고침
-          </button>
+        <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center bg-[#0a0e27]">
+          <div className="glass-card p-8 max-w-sm w-full flex flex-col items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-red-500/20 flex items-center justify-center text-2xl">
+              🚌
+            </div>
+            <h2 className="text-xl font-bold text-white">오류가 발생했습니다</h2>
+            <p className="text-sm text-slate-400">{errorMessage}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="btn-primary w-full py-3 text-sm"
+            >
+              새로고침
+            </button>
+          </div>
         </div>
       );
     }
@@ -50,9 +55,21 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
 
 export default function App() {
   return (
-    <ErrorBoundary>
-      <Page />
-      <Toaster position="top-center" />
-    </ErrorBoundary>
+    <div className="h-full">
+      <ErrorBoundary>
+        <Page />
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            style: {
+              background: "rgba(20, 27, 61, 0.95)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              color: "white",
+              backdropFilter: "blur(20px)",
+            },
+          }}
+        />
+      </ErrorBoundary>
+    </div>
   );
 }

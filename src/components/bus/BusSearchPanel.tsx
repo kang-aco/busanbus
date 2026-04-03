@@ -1,24 +1,16 @@
 "use client";
 
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, Clock, X } from "lucide-react";
 import React, { useState } from "react";
-import type { BusRoute } from "@/lib/bus-api/types";
+import ErrorAlert from "@/components/ui/ErrorAlert";
 
 interface BusSearchPanelProps {
   onSearch: (lineNo: string) => void;
-  onRouteSelect: (route: BusRoute) => void;
-  routes: BusRoute[];
   loading: boolean;
   error: string | null;
 }
 
-export default function BusSearchPanel({
-  onSearch,
-  onRouteSelect,
-  routes,
-  loading,
-  error,
-}: BusSearchPanelProps) {
+export default function BusSearchPanel({ onSearch, loading, error }: BusSearchPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     if (typeof window !== "undefined") {
@@ -30,10 +22,7 @@ export default function BusSearchPanel({
 
   const handleSearch = () => {
     if (!searchQuery.trim()) return;
-
     onSearch(searchQuery.trim());
-
-    // 최근 검색어 저장
     const updated = [
       searchQuery.trim(),
       ...recentSearches.filter((s) => s !== searchQuery.trim()),
@@ -44,10 +33,8 @@ export default function BusSearchPanel({
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleSearch();
-    }
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") handleSearch();
   };
 
   const handleRecentSearchClick = (search: string) => {
@@ -63,56 +50,60 @@ export default function BusSearchPanel({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 space-y-4">
-      <h2 className="text-xl font-bold">버스 노선 검색</h2>
-
-      {/* 검색 입력 */}
+    <div className="flex flex-col gap-3">
+      {/* Search input */}
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="버스 번호 입력 (예: 179)"
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            onKeyDown={handleKeyDown}
+            placeholder="버스 번호 입력 (예: 179, 1003)"
+            className="glass-input w-full pl-10 pr-4 py-3 text-sm"
+            aria-label="버스 번호 검색"
           />
         </div>
         <button
           onClick={handleSearch}
           disabled={loading || !searchQuery.trim()}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="btn-primary px-4 py-3 flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+          aria-label="검색"
         >
           {loading ? (
-            <>
-              <Loader2 className="h-5 w-5 animate-spin" />
-              검색중
-            </>
+            <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
-            "검색"
+            <Search className="w-4 h-4" />
           )}
+          <span className="text-sm hidden sm:inline">
+            {loading ? "검색중" : "검색"}
+          </span>
         </button>
       </div>
 
-      {/* 최근 검색 */}
+      {/* Recent searches */}
       {recentSearches.length > 0 && (
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-gray-700">최근 검색</p>
+            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+              <Clock className="w-3.5 h-3.5" />
+              <span>최근 검색</span>
+            </div>
             <button
               onClick={clearRecentSearches}
-              className="text-xs text-gray-500 hover:text-gray-700"
+              className="flex items-center gap-1 text-xs text-slate-600 hover:text-slate-400 transition-colors"
             >
+              <X className="w-3 h-3" />
               전체 삭제
             </button>
           </div>
           <div className="flex flex-wrap gap-2">
-            {recentSearches.map((search, index) => (
+            {recentSearches.map((search, idx) => (
               <button
-                key={index}
+                key={idx}
                 onClick={() => handleRecentSearchClick(search)}
-                className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200"
+                className="px-3 py-1 text-xs rounded-full border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white transition-all"
               >
                 {search}
               </button>
@@ -121,12 +112,7 @@ export default function BusSearchPanel({
         </div>
       )}
 
-      {/* 에러 메시지 */}
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
-          {error}
-        </div>
-      )}
+      {error && <ErrorAlert message={error} />}
     </div>
   );
 }
