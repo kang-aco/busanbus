@@ -30,7 +30,10 @@ export function useBusLocations(lineId: string | null) {
       const list = Array.isArray(data?.locations) ? data.locations : [];
 
       if (requestId === requestIdRef.current) {
-        setLocations(list);
+        // Only update state when data actually changed to prevent unnecessary re-renders
+        setLocations((prev) =>
+          JSON.stringify(prev) === JSON.stringify(list) ? prev : list
+        );
       }
     } catch (err: any) {
       console.error("[Location Error]:", err);

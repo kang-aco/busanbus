@@ -30,7 +30,10 @@ export function useBusArrivals(stopId: string | null) {
       const list = Array.isArray(data?.arrivals) ? data.arrivals : [];
 
       if (requestId === requestIdRef.current) {
-        setArrivals(list);
+        // Only update state when data actually changed to prevent unnecessary re-renders
+        setArrivals((prev) =>
+          JSON.stringify(prev) === JSON.stringify(list) ? prev : list
+        );
       }
     } catch (err: any) {
       console.error("[Arrival Error]:", err);

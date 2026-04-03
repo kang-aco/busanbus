@@ -2,6 +2,7 @@
 
 import { MapPin, Bus, Radio } from "lucide-react";
 import type { BusLocation, BusRoute } from "@/lib/bus-api/types";
+import { routeDisplayNumber } from "@/lib/utils";
 
 export default function RouteDetailPanel({
   route,
@@ -12,7 +13,7 @@ export default function RouteDetailPanel({
 }) {
   if (!route) return null;
 
-  const routeDisplay = (route.lineNo || route.lineId).split(":").pop();
+  const routeDisplay = routeDisplayNumber(route.lineNo, route.lineId);
 
   return (
     <div className="flex flex-col gap-3 animate-fade-in">

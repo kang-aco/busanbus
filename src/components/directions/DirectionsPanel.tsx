@@ -2,6 +2,7 @@
 
 import type { ReactNode, FormEvent } from "react";
 import { useState } from "react";
+import ErrorAlert from "@/components/ui/ErrorAlert";
 import {
   ArrowRight,
   Bus,
@@ -137,12 +138,7 @@ export default function DirectionsPanel() {
         </form>
       </GlassCard>
 
-      {/* Error */}
-      {error && (
-        <GlassCard className="border-red-500/30 bg-red-500/10 animate-slide-up">
-          <p className="text-sm text-red-400">{error}</p>
-        </GlassCard>
-      )}
+      {error && <ErrorAlert message={error} />}
 
       {/* Result */}
       {result && (

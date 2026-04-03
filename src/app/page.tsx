@@ -2,15 +2,7 @@
 
 import type { JSX } from "react";
 import { useState } from "react";
-import {
-  Bus,
-  MapPin,
-  Navigation,
-  Loader2,
-  RefreshCw,
-  X,
-  Star,
-} from "lucide-react";
+import { Bus, MapPin, Navigation, Loader2, RefreshCw, X, Star } from "lucide-react";
 import BusSearchPanel from "@/components/bus/BusSearchPanel";
 import RouteList from "@/components/bus/RouteList";
 import RouteDetailPanel from "@/components/bus/RouteDetailPanel";
@@ -18,11 +10,13 @@ import ArrivalPanel from "@/components/bus/ArrivalPanel";
 import BusMap from "@/components/bus/BusMap";
 import StopSearchPanel from "@/components/bus/StopSearchPanel";
 import DirectionsPanel from "@/components/directions/DirectionsPanel";
+import ErrorAlert from "@/components/ui/ErrorAlert";
 import GlassCard from "@/components/ui/GlassCard";
 import { useBusSearch } from "@/hooks/useBusSearch";
 import { useBusLocations } from "@/hooks/useBusLocations";
 import { useBusArrivals } from "@/hooks/useBusArrivals";
 import { useFavorites } from "@/hooks/useFavorites";
+import { routeDisplayNumber } from "@/lib/utils";
 import type { BusRoute } from "@/lib/bus-api/types";
 
 type Tab = "routes" | "stops" | "directions";
@@ -33,11 +27,15 @@ const TABS: { id: Tab; label: string; icon: JSX.Element }[] = [
   { id: "directions", label: "길찾기", icon: <Navigation className="w-5 h-5" /> },
 ];
 
+interface SelectedStop {
+  id: string;
+  name: string;
+}
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("routes");
   const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(null);
-  const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
-  const [selectedStopName, setSelectedStopName] = useState<string | null>(null);
+  const [selectedStop, setSelectedStop] = useState<SelectedStop | null>(null);
 
   const { routes = [], loading = false, error = null, searchBus } = useBusSearch();
   const {
@@ -46,7 +44,7 @@ export default function Home() {
     locationError,
     refreshLocations,
   } = useBusLocations(selectedRoute?.lineId || null);
-  const { arrivals = [], arrivalLoading, arrivalError } = useBusArrivals(selectedStopId);
+  const { arrivals = [], arrivalLoading, arrivalError } = useBusArrivals(selectedStop?.id ?? null);
   const { favorites = [], toggleFavorite } = useFavorites();
 
   const isFavorite = (lineId: string) => favorites.includes(lineId);
@@ -56,27 +54,8 @@ export default function Home() {
     setSelectedRoute(null);
   };
 
-  const handleRouteSelect = (route: BusRoute) => {
-    setSelectedRoute(route);
-  };
-
-  const handleStopSelect = (stopId: string, stopName: string) => {
-    setSelectedStopId(stopId);
-    setSelectedStopName(stopName);
-  };
-
-  const clearStop = () => {
-    setSelectedStopId(null);
-    setSelectedStopName(null);
-  };
-
-  const clearRoute = () => {
-    setSelectedRoute(null);
-  };
-
   return (
     <div className="flex flex-col h-full bg-space-900 overflow-hidden">
-      {/* Header */}
       <header className="flex-shrink-0 px-4 pt-safe-top pt-4 pb-3 border-b border-white/8">
         <div className="flex items-center justify-between max-w-2xl mx-auto">
           <div className="flex items-center gap-2.5">
@@ -95,7 +74,6 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Tab bar */}
       <div className="flex-shrink-0 border-b border-white/8">
         <div className="flex max-w-2xl mx-auto">
           {TABS.map((tab) => (
@@ -103,15 +81,12 @@ export default function Home() {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-all relative ${
-                activeTab === tab.id
-                  ? "text-white"
-                  : "text-slate-500 hover:text-slate-300"
+                activeTab === tab.id ? "text-white" : "text-slate-500 hover:text-slate-300"
               }`}
               aria-current={activeTab === tab.id ? "page" : undefined}
             >
               {tab.icon}
-              <span className="hidden sm:inline">{tab.label}</span>
-              <span className="sm:hidden text-xs">{tab.label}</span>
+              <span className="text-xs sm:text-sm">{tab.label}</span>
               {activeTab === tab.id && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0066ff] rounded-full" />
               )}
@@ -120,43 +95,30 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Main content */}
       <main className="flex-1 overflow-y-auto">
         <div className="max-w-2xl mx-auto px-4 py-4 pb-6">
 
-          {/* ===== ROUTES TAB ===== */}
           {activeTab === "routes" && (
             <div className="flex flex-col gap-4">
               <GlassCard>
-                <BusSearchPanel
-                  onSearch={handleSearch}
-                  onRouteSelect={handleRouteSelect}
-                  routes={routes}
-                  loading={loading}
-                  error={error}
-                />
+                <BusSearchPanel onSearch={handleSearch} loading={loading} error={error} />
               </GlassCard>
 
-              {/* Route list */}
               {routes.length > 0 && !selectedRoute && (
                 <div className="flex flex-col gap-2">
-                  <p className="text-xs text-slate-500 px-1">
-                    {routes.length}개의 노선을 찾았습니다
-                  </p>
+                  <p className="text-xs text-slate-500 px-1">{routes.length}개의 노선을 찾았습니다</p>
                   <RouteList
                     routes={routes}
-                    selectedRouteId={selectedRoute?.lineId ?? null}
-                    onSelect={handleRouteSelect}
+                    selectedRouteId={selectedRoute}
+                    onSelect={setSelectedRoute}
                     isFavorite={isFavorite}
                     onToggleFavorite={(route) => toggleFavorite(route.lineId)}
                   />
                 </div>
               )}
 
-              {/* Selected route details */}
               {selectedRoute && (
                 <div className="flex flex-col gap-3">
-                  {/* Selected route header */}
                   <GlassCard className="flex items-center justify-between py-3" glowColor="blue">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-lg bg-[#0066ff]/20 flex items-center justify-center">
@@ -164,7 +126,7 @@ export default function Home() {
                       </div>
                       <div>
                         <span className="text-sm font-bold text-white">
-                          {(selectedRoute.lineNo || selectedRoute.lineId).split(":").pop()}번
+                          {routeDisplayNumber(selectedRoute.lineNo, selectedRoute.lineId)}번
                         </span>
                         {isFavorite(selectedRoute.lineId) && (
                           <Star className="inline ml-1.5 w-3 h-3 fill-amber-400 text-amber-400" />
@@ -196,7 +158,7 @@ export default function Home() {
                         </button>
                       )}
                       <button
-                        onClick={clearRoute}
+                        onClick={() => setSelectedRoute(null)}
                         className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-slate-400 hover:text-white"
                         aria-label="닫기"
                       >
@@ -205,31 +167,22 @@ export default function Home() {
                     </div>
                   </GlassCard>
 
-                  {/* Location loading/error */}
                   {locationLoading && (
                     <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-[#0066ff]/10 border border-[#0066ff]/20 text-sm text-[#4d94ff]">
                       <Loader2 className="w-4 h-4 animate-spin" />
                       버스 위치 정보를 불러오는 중...
                     </div>
                   )}
+                  {locationError && <ErrorAlert message={locationError} />}
 
-                  {locationError && (
-                    <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20">
-                      <p className="text-sm text-red-400">{locationError}</p>
-                    </div>
-                  )}
-
-                  {/* Route details */}
                   <GlassCard>
                     <RouteDetailPanel route={selectedRoute} locations={busLocations} />
                   </GlassCard>
 
-                  {/* Map */}
                   <BusMap locations={busLocations} />
                 </div>
               )}
 
-              {/* Favorites section (when no search yet) */}
               {routes.length === 0 && !loading && favorites.length > 0 && (
                 <div className="flex flex-col gap-2">
                   <p className="text-xs text-slate-500 px-1 flex items-center gap-1.5">
@@ -240,17 +193,16 @@ export default function Home() {
                     {favorites.map((lineId) => (
                       <button
                         key={lineId}
-                        onClick={() => handleSearch(lineId.split(":").pop() || lineId)}
+                        onClick={() => handleSearch(routeDisplayNumber(undefined, lineId))}
                         className="px-3 py-1.5 text-xs rounded-xl border border-amber-400/20 bg-amber-400/8 text-amber-300 hover:bg-amber-400/15 transition-all"
                       >
-                        {lineId.split(":").pop()}번
+                        {routeDisplayNumber(undefined, lineId)}번
                       </button>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Empty state */}
               {routes.length === 0 && !loading && !error && favorites.length === 0 && (
                 <div className="flex flex-col items-center gap-3 py-16 text-slate-600">
                   <Bus className="w-12 h-12" />
@@ -263,25 +215,23 @@ export default function Home() {
             </div>
           )}
 
-          {/* ===== STOPS TAB ===== */}
           {activeTab === "stops" && (
             <div className="flex flex-col gap-4">
               <GlassCard>
-                <StopSearchPanel onStopSelect={handleStopSelect} />
+                <StopSearchPanel onStopSelect={(id, name) => setSelectedStop({ id, name })} />
               </GlassCard>
 
-              {/* Selected stop arrivals */}
-              {selectedStopId && selectedStopName && (
+              {selectedStop && (
                 <div className="flex flex-col gap-3">
                   <GlassCard className="flex items-center justify-between py-3" glowColor="green">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-lg bg-[#00ff88]/15 flex items-center justify-center">
                         <MapPin className="w-3.5 h-3.5 text-[#00ff88]" />
                       </div>
-                      <span className="text-sm font-semibold text-white">{selectedStopName}</span>
+                      <span className="text-sm font-semibold text-white">{selectedStop.name}</span>
                     </div>
                     <button
-                      onClick={clearStop}
+                      onClick={() => setSelectedStop(null)}
                       className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-slate-400 hover:text-white"
                       aria-label="닫기"
                     >
@@ -295,25 +245,15 @@ export default function Home() {
                       도착 정보 불러오는 중...
                     </div>
                   )}
+                  {arrivalError && <ErrorAlert message={arrivalError} />}
 
-                  {arrivalError && (
-                    <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20">
-                      <p className="text-sm text-red-400">{arrivalError}</p>
-                    </div>
-                  )}
-
-                  {!arrivalLoading && (
-                    <ArrivalPanel arrivals={arrivals} />
-                  )}
+                  {!arrivalLoading && <ArrivalPanel arrivals={arrivals} />}
                 </div>
               )}
             </div>
           )}
 
-          {/* ===== DIRECTIONS TAB ===== */}
-          {activeTab === "directions" && (
-            <DirectionsPanel />
-          )}
+          {activeTab === "directions" && <DirectionsPanel />}
         </div>
       </main>
     </div>

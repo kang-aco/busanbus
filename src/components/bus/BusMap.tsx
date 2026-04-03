@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { GoogleMap, Marker, useLoadScript } from "@react-google-maps/api";
 import { MapPin } from "lucide-react";
 import type { BusLocation } from "@/lib/bus-api/types";
@@ -85,15 +85,22 @@ export default function BusMap({ locations }: { locations: BusLocation[] }) {
     );
   }
 
-  const validLocations = locations.filter(
-    (loc) =>
-      loc.gpsY && loc.gpsX && !isNaN(parseFloat(loc.gpsY)) && !isNaN(parseFloat(loc.gpsX))
+  const validLocations = useMemo(
+    () =>
+      locations.filter(
+        (loc) =>
+          loc.gpsY && loc.gpsX && !isNaN(parseFloat(loc.gpsY)) && !isNaN(parseFloat(loc.gpsX))
+      ),
+    [locations]
   );
 
-  const center =
-    validLocations.length > 0
-      ? { lat: parseFloat(validLocations[0].gpsY!), lng: parseFloat(validLocations[0].gpsX!) }
-      : BUSAN_CENTER;
+  const center = useMemo(
+    () =>
+      validLocations.length > 0
+        ? { lat: parseFloat(validLocations[0].gpsY!), lng: parseFloat(validLocations[0].gpsX!) }
+        : BUSAN_CENTER,
+    [validLocations]
+  );
 
   return (
     <div className="glass-card p-3">

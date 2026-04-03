@@ -2,21 +2,15 @@
 
 import { Search, Loader2, Clock, X } from "lucide-react";
 import React, { useState } from "react";
-import type { BusRoute } from "@/lib/bus-api/types";
+import ErrorAlert from "@/components/ui/ErrorAlert";
 
 interface BusSearchPanelProps {
   onSearch: (lineNo: string) => void;
-  onRouteSelect: (route: BusRoute) => void;
-  routes: BusRoute[];
   loading: boolean;
   error: string | null;
 }
 
-export default function BusSearchPanel({
-  onSearch,
-  loading,
-  error,
-}: BusSearchPanelProps) {
+export default function BusSearchPanel({ onSearch, loading, error }: BusSearchPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     if (typeof window !== "undefined") {
@@ -118,12 +112,7 @@ export default function BusSearchPanel({
         </div>
       )}
 
-      {/* Error */}
-      {error && (
-        <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20">
-          <p className="text-sm text-red-400">{error}</p>
-        </div>
-      )}
+      {error && <ErrorAlert message={error} />}
     </div>
   );
 }

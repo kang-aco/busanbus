@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { stripHtml } from "@/lib/utils";
 
 export type TransportMode = "transit" | "driving" | "bicycling" | "walking";
 
@@ -61,9 +62,6 @@ export interface ParsedStep {
   arrivalTime?: string;
 }
 
-function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
-}
 
 export function useDirections() {
   const [loading, setLoading] = useState(false);

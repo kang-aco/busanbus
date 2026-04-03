@@ -2,6 +2,7 @@
 
 import { Search, MapPin, Loader2 } from "lucide-react";
 import React, { useState } from "react";
+import ErrorAlert from "@/components/ui/ErrorAlert";
 
 interface Stop {
   stopId: string;
@@ -84,12 +85,7 @@ export default function StopSearchPanel({ onStopSelect }: StopSearchPanelProps) 
         </button>
       </div>
 
-      {/* Error */}
-      {error && (
-        <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20">
-          <p className="text-sm text-red-400">{error}</p>
-        </div>
-      )}
+      {error && <ErrorAlert message={error} />}
 
       {/* Results */}
       {stops.length > 0 && (
