@@ -1,6 +1,7 @@
 "use client";
 
 import { MapPin, Bus, Radio } from "lucide-react";
+import { motion } from "motion/react";
 import type { BusLocation, BusRoute } from "@/lib/bus-api/types";
 import { routeDisplayNumber } from "@/lib/utils";
 
@@ -13,18 +14,22 @@ export default function RouteDetailPanel({
 }) {
   if (!route) return null;
 
-  const routeDisplay = routeDisplayNumber(route.lineNo, route.lineId);
-
   return (
-    <div className="flex flex-col gap-3 animate-fade-in">
-      {/* Header */}
+    <motion.div
+      className="flex flex-col gap-3"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.2 }}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-[#0066ff]/20 flex items-center justify-center">
             <Bus className="w-4 h-4 text-[#4d94ff]" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-white">{routeDisplay}번 실시간 위치</h3>
+            <h3 className="text-sm font-bold text-white">
+              {routeDisplayNumber(route.lineNo, route.lineId)}번 실시간 위치
+            </h3>
             <p className="text-xs text-slate-500">운행중 {locations.length}대</p>
           </div>
         </div>
@@ -36,20 +41,28 @@ export default function RouteDetailPanel({
         )}
       </div>
 
-      {/* Bus list */}
-      <div className="flex flex-col gap-2" role="list">
+      <motion.div
+        className="flex flex-col gap-2"
+        role="list"
+        initial="hidden"
+        animate="show"
+        variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07 } } }}
+      >
         {locations.length === 0 ? (
           <div className="glass-card border-dashed border-white/10 p-8 flex flex-col items-center gap-2 text-slate-600">
             <Bus className="w-8 h-8" />
             <p className="text-sm">현재 운행중인 버스가 없습니다.</p>
           </div>
         ) : (
-          locations.map((bus, idx) => (
-            <div
+          locations.map((bus) => (
+            <motion.div
               key={bus.vehId}
-              className="glass-card animate-slide-up"
-              style={{ animationDelay: `${idx * 50}ms`, animationFillMode: "both" }}
               role="listitem"
+              variants={{
+                hidden: { opacity: 0, x: 16 },
+                show: { opacity: 1, x: 0, transition: { type: "spring", stiffness: 280, damping: 22 } },
+              }}
+              className="glass-card"
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3">
@@ -57,14 +70,10 @@ export default function RouteDetailPanel({
                     <span className="text-lg leading-none">🚌</span>
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-white">
-                      {bus.plateNo || bus.vehId}
-                    </p>
+                    <p className="text-sm font-semibold text-white">{bus.plateNo || bus.vehId}</p>
                     <div className="flex items-center gap-1 mt-0.5">
                       <MapPin className="w-3 h-3 text-slate-500" />
-                      <p className="text-xs text-slate-400">
-                        {bus.nodeNm || "위치 정보 없음"}
-                      </p>
+                      <p className="text-xs text-slate-400">{bus.nodeNm || "위치 정보 없음"}</p>
                     </div>
                   </div>
                 </div>
@@ -79,10 +88,10 @@ export default function RouteDetailPanel({
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
           ))
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

@@ -193,11 +193,3 @@
     opacity: 1;
   }
 }
-
-.animate-slide-up {
-  animation: slide-up 0.3s ease-out forwards;
-}
-
-.animate-fade-in {
-  animation: fade-in 0.25s ease-out forwards;
-}

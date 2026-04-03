@@ -2,6 +2,7 @@
 
 import { Search, MapPin, Loader2 } from "lucide-react";
 import React, { useState } from "react";
+import { motion } from "motion/react";
 import ErrorAlert from "@/components/ui/ErrorAlert";
 
 interface Stop {
@@ -55,7 +56,6 @@ export default function StopSearchPanel({ onStopSelect }: StopSearchPanelProps) 
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Search input */}
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -79,27 +79,32 @@ export default function StopSearchPanel({ onStopSelect }: StopSearchPanelProps) 
           ) : (
             <Search className="w-4 h-4" />
           )}
-          <span className="text-sm hidden sm:inline">
-            {loading ? "검색중" : "검색"}
-          </span>
+          <span className="text-sm hidden sm:inline">{loading ? "검색중" : "검색"}</span>
         </button>
       </div>
 
       {error && <ErrorAlert message={error} />}
 
-      {/* Results */}
       {stops.length > 0 && (
         <div className="flex flex-col gap-2">
-          <p className="text-xs text-slate-500 px-1">
-            {stops.length}개의 정류소
-          </p>
-          <div className="flex flex-col gap-2 max-h-80 overflow-y-auto pr-1">
-            {stops.map((stop, idx) => (
-              <button
+          <p className="text-xs text-slate-500 px-1">{stops.length}개의 정류소</p>
+          <motion.div
+            className="flex flex-col gap-2 max-h-80 overflow-y-auto pr-1"
+            initial="hidden"
+            animate="show"
+            variants={{ hidden: {}, show: { transition: { staggerChildren: 0.05 } } }}
+          >
+            {stops.map((stop) => (
+              <motion.button
                 key={stop.stopId}
                 onClick={() => onStopSelect(stop.stopId, stop.stopName)}
-                className="glass-card hover:bg-white/8 hover:border-white/20 text-left transition-all animate-slide-up group"
-                style={{ animationDelay: `${idx * 40}ms`, animationFillMode: "both" }}
+                variants={{
+                  hidden: { opacity: 0, y: 10 },
+                  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } },
+                }}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.98 }}
+                className="glass-card hover:bg-white/8 hover:border-white/20 text-left transition-colors group"
                 aria-label={`${stop.stopName} 정류소 선택`}
               >
                 <div className="flex items-center gap-3">
@@ -108,18 +113,15 @@ export default function StopSearchPanel({ onStopSelect }: StopSearchPanelProps) 
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-white truncate">{stop.stopName}</p>
-                    <p className="text-xs text-slate-500">
-                      번호: {stop.arsno || stop.stopId}
-                    </p>
+                    <p className="text-xs text-slate-500">번호: {stop.arsno || stop.stopId}</p>
                   </div>
                 </div>
-              </button>
+              </motion.button>
             ))}
-          </div>
+          </motion.div>
         </div>
       )}
 
-      {/* Empty state */}
       {!loading && stops.length === 0 && !error && (
         <div className="flex flex-col items-center gap-2 py-10 text-slate-600">
           <MapPin className="w-8 h-8" />
