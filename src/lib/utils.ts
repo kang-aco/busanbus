@@ -13,7 +13,8 @@ export function stripHtml(html: string): string {
 /**
  * Extract the human-readable route number from a lineNo/lineId field.
  * Some API responses return composite IDs like "BUS:1003"; this returns "1003".
+ * Coerces to string first — API responses sometimes return numeric values.
  */
-export function routeDisplayNumber(lineNo?: string, lineId?: string): string {
-  return (lineNo || lineId || "").split(":").pop() || "";
+export function routeDisplayNumber(lineNo?: string | number, lineId?: string | number): string {
+  return String(lineNo ?? lineId ?? "").split(":").pop() || "";
 }
