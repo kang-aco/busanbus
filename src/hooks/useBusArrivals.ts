@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { BusArrival } from "@/lib/bus-api/types";
 
-interface StopInfo { seq: number; name: string; nodeId: string; }
+interface StopInfo { seq: number; name: string; nodeId: string; bstopid?: string; arsno?: string; }
 
 /** lineId → 전체 정류소 배열 캐시 */
 const stopsCache = new Map<string, StopInfo[]>();
@@ -29,8 +29,11 @@ function resolveNames(
   const terminalStart = stops[0]?.name ?? "";
   const terminalEnd   = stops[stops.length - 1]?.name ?? "";
 
-  // station1이 이름 형태면 그대로 방면으로 사용
-  if (station1 && !/^\d+$/.test(station1)) {
+  // station1이 ARS 번호 형태("ARS11129")면 숫자 부분 추출
+  const arsNum = /^ARS(\d+)$/i.test(station1) ? station1.replace(/^ARS/i, "") : null;
+
+  // station1이 이름 형태면 그대로 방면으로 사용 (단, ARS 형태는 제외)
+  if (station1 && !/^\d+$/.test(station1) && !arsNum) {
     return {
       direction: station1.endsWith("방면") ? station1 : `${station1} 방면`,
       nextStop: station1,
@@ -39,8 +42,12 @@ function resolveNames(
     };
   }
 
-  // station1이 숫자(nodeId)면 정류소 이름 조회
-  const matched = stops.find((s) => s.nodeId === station1);
+  // station1이 숫자(nodeId) 또는 ARS 번호면 정류소 이름 조회
+  const matched = stops.find((s) =>
+    s.nodeId === station1 ||
+    s.bstopid === station1 ||
+    (arsNum && (s.arsno === arsNum || s.nodeId === arsNum || s.bstopid === arsNum))
+  );
   const nextStop = matched?.name ?? "";
 
   // 방면: 매칭된 정류소가 앞쪽이면 종점 방면, 뒤쪽이면 기점 방면

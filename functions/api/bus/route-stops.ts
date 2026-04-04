@@ -46,10 +46,12 @@ export async function onRequest(context: any) {
         const seq = parseInt(getTag(c, "nodeno") || getTag(c, "stnno") || "0", 10);
         const name = getTag(c, "bstopnm") || getTag(c, "nodenm") || getTag(c, "nodeNm");
         const nodeId = getTag(c, "nodeid") || getTag(c, "nodeId");
+        const bstopid = getTag(c, "bstopid");
+        const arsno = getTag(c, "arsno");
 
         if (!lat || !lng || isNaN(parseFloat(lat)) || isNaN(parseFloat(lng))) return null;
 
-        return { seq, name, nodeId, lat: parseFloat(lat), lng: parseFloat(lng) };
+        return { seq, name, nodeId, bstopid, arsno, lat: parseFloat(lat), lng: parseFloat(lng) };
       })
       .filter(Boolean);
 
