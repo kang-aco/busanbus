@@ -33,6 +33,9 @@ export type BusArrival = {
   min1: string;
   min2?: string;
   stopId?: string;
+  direction?: string;      // 해석된 방면명 (예: "해운대 방면")
+  terminalStart?: string;  // 노선 기점 이름
+  terminalEnd?: string;    // 노선 종점 이름
 };
 
 export type NormalizedApiError = {
