@@ -44,11 +44,14 @@ export async function onRequest(context: any) {
 
         const arrivals = items.map((itemMatch) => {
           const c = itemMatch[1];
+          // stationNm1/stationNm2는 정류소 이름, station1/station2는 ID
+          const stationNm1 = getTag(c, "stationNm1") || getTag(c, "stationnm1");
+          const stationNm2 = getTag(c, "stationNm2") || getTag(c, "stationnm2");
           return {
             lineId:   getTag(c, "lineid"),
             lineNo:   getTag(c, "lineno"),
-            station1: getTag(c, "station1"),
-            station2: getTag(c, "station2"),
+            station1: stationNm1 || getTag(c, "station1"),
+            station2: stationNm2 || getTag(c, "station2"),
             min1:     getTag(c, "min1"),
             min2:     getTag(c, "min2"),
             stopId:   getTag(c, "bstopid"),
