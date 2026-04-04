@@ -18,6 +18,8 @@ import {
   Navigation,
   Loader2,
   ArrowLeftRight,
+  ExternalLink,
+  AlertCircle,
 } from "lucide-react";
 import { stripHtml } from "@/lib/utils";
 import GlassCard from "@/components/ui/GlassCard";
@@ -31,11 +33,21 @@ const MODES: { id: TransportMode; label: string; icon: ReactNode }[] = [
   { id: "walking", label: "도보", icon: <Footprints className="w-4 h-4" /> },
 ];
 
-const TRAVEL_MODES: Record<TransportMode, string> = {
-  transit: "TRANSIT",
-  driving: "DRIVING",
-  bicycling: "BICYCLING",
-  walking: "WALKING",
+// 구글 지도는 한국 내 규제로 대중교통 외 경로 미지원
+const GOOGLE_UNSUPPORTED_MODES: TransportMode[] = ["driving", "bicycling", "walking"];
+
+const KAKAO_MODE: Record<TransportMode, string> = {
+  transit: "transit",
+  driving: "car",
+  bicycling: "bicycle",
+  walking: "foot",
+};
+
+const NAVER_MODE: Record<TransportMode, string> = {
+  transit: "bus",
+  driving: "car",
+  bicycling: "bicycle",
+  walking: "walk",
 };
 
 const STEP_MODE_COLORS: Record<string, string> = {
@@ -90,6 +102,55 @@ interface ParsedRoute {
   steps: ParsedStep[];
 }
 
+function ExternalMapLinks({
+  origin,
+  destination,
+  mode,
+}: {
+  origin: string;
+  destination: string;
+  mode: TransportMode;
+}) {
+  const enc = encodeURIComponent;
+  const kakaoUrl = `https://map.kakao.com/link/from/${enc(origin)}/to/${enc(destination)}`;
+  const naverUrl = `https://map.naver.com/v5/directions/-/-/-/${NAVER_MODE[mode]}?c=14133310.0000000,4291799.0000000,13,0,0,0,dh&o=${enc(origin)}&d=${enc(destination)}`;
+
+  return (
+    <GlassCard className="gap-3">
+      <div className="flex items-start gap-2.5">
+        <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-sm font-medium text-amber-300">구글 지도 한국 경로 미지원</p>
+          <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
+            구글 지도 API는 한국 내 자동차·자전거·도보 경로를 지원하지 않습니다.
+            카카오맵 또는 네이버 지도에서 확인해 주세요.
+          </p>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <a
+          href={kakaoUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-semibold bg-[#FEE500] text-[#3A1D1D] hover:bg-[#FFD700] transition-colors"
+        >
+          <ExternalLink className="w-3.5 h-3.5" />
+          카카오맵
+        </a>
+        <a
+          href={naverUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-semibold bg-[#03C75A] text-white hover:bg-[#02B350] transition-colors"
+        >
+          <ExternalLink className="w-3.5 h-3.5" />
+          네이버 지도
+        </a>
+      </div>
+    </GlassCard>
+  );
+}
+
 // Inner component: only mounted when apiKey is ready
 function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
   const [origin, setOrigin] = useState("");
@@ -102,11 +163,16 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
 
   const { isLoaded } = useLoadScript({ googleMapsApiKey: apiKey });
 
+  const isUnsupported = GOOGLE_UNSUPPORTED_MODES.includes(mode);
+
   const reset = useCallback(() => {
     setDirections(null);
     setParsedRoute(null);
     setError(null);
   }, []);
+
+  // 모드 변경 시 결과 초기화
+  useEffect(() => { reset(); }, [mode, reset]);
 
   const handleSwap = () => {
     setOrigin(destination);
@@ -117,7 +183,7 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
   const handleSearch = useCallback(
     (e: FormEvent) => {
       e.preventDefault();
-      if (!isLoaded || !origin.trim() || !destination.trim()) return;
+      if (!isLoaded || !origin.trim() || !destination.trim() || isUnsupported) return;
 
       setLoading(true);
       setError(null);
@@ -129,21 +195,14 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
       if (!from.includes("부산")) from = `부산 ${from}`;
       if (!to.includes("부산")) to = `부산 ${to}`;
 
-      const travelMode =
-        google.maps.TravelMode[TRAVEL_MODES[mode] as keyof typeof google.maps.TravelMode];
-
       const request: google.maps.DirectionsRequest = {
         origin: from,
         destination: to,
-        travelMode,
+        travelMode: google.maps.TravelMode.TRANSIT,
         region: "kr",
-        ...(mode === "transit"
-          ? {
-              transitOptions: {
-                modes: [google.maps.TransitMode.BUS, google.maps.TransitMode.SUBWAY],
-              },
-            }
-          : {}),
+        transitOptions: {
+          modes: [google.maps.TransitMode.BUS, google.maps.TransitMode.SUBWAY],
+        },
       };
 
       new google.maps.DirectionsService().route(request, (result, status) => {
@@ -159,8 +218,7 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
               duration: step.duration?.text ?? "",
               distance: step.distance?.text ?? "",
               mode: step.travel_mode,
-              transitLine:
-                step.transit?.line?.short_name || step.transit?.line?.name,
+              transitLine: step.transit?.line?.short_name || step.transit?.line?.name,
               numStops: step.transit?.num_stops,
               departureStop: step.transit?.departure_stop?.name,
               arrivalStop: step.transit?.arrival_stop?.name,
@@ -170,14 +228,14 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
         } else {
           const messages: Partial<Record<google.maps.DirectionsStatus, string>> = {
             [google.maps.DirectionsStatus.NOT_FOUND]: "출발지 또는 도착지를 찾을 수 없습니다.",
-            [google.maps.DirectionsStatus.ZERO_RESULTS]: "해당 경로를 찾을 수 없습니다.",
-            [google.maps.DirectionsStatus.REQUEST_DENIED]: "Directions API 사용 권한이 없습니다.",
+            [google.maps.DirectionsStatus.ZERO_RESULTS]: "해당 경로를 찾을 수 없습니다. 출발지와 도착지를 확인해 주세요.",
+            [google.maps.DirectionsStatus.REQUEST_DENIED]: "Directions API 사용 권한이 없습니다. API 키를 확인해 주세요.",
           };
-          setError(messages[status] ?? "경로를 찾을 수 없습니다. 출발지와 도착지를 확인해 주세요.");
+          setError(messages[status] ?? `경로 검색 실패 (${status})`);
         }
       });
     },
-    [isLoaded, origin, destination, mode]
+    [isLoaded, origin, destination, isUnsupported]
   );
 
   return (
@@ -224,7 +282,7 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
               <button
                 key={m.id}
                 type="button"
-                onClick={() => { setMode(m.id); reset(); }}
+                onClick={() => setMode(m.id)}
                 className={`flex flex-col items-center gap-1 py-2 px-1 rounded-lg text-xs font-medium transition-all ${
                   mode === m.id
                     ? "bg-[#0066ff] text-white shadow-lg"
@@ -237,17 +295,37 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
             ))}
           </div>
 
-          <motion.button
-            type="submit"
-            disabled={!origin.trim() || !destination.trim() || loading || !isLoaded}
-            className="btn-primary flex items-center justify-center gap-2 py-3 px-6 disabled:opacity-40 disabled:cursor-not-allowed w-full"
-            whileTap={{ scale: 0.97 }}
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-            <span className="text-sm font-semibold">{loading ? "검색 중..." : "경로 검색"}</span>
-          </motion.button>
+          {/* 대중교통만 검색 버튼 표시 */}
+          {!isUnsupported && (
+            <motion.button
+              type="submit"
+              disabled={!origin.trim() || !destination.trim() || loading || !isLoaded}
+              className="btn-primary flex items-center justify-center gap-2 py-3 px-6 disabled:opacity-40 disabled:cursor-not-allowed w-full"
+              whileTap={{ scale: 0.97 }}
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              <span className="text-sm font-semibold">{loading ? "검색 중..." : "경로 검색"}</span>
+            </motion.button>
+          )}
         </form>
       </GlassCard>
+
+      {/* 비대중교통: 외부 앱 링크 */}
+      <AnimatePresence>
+        {isUnsupported && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+          >
+            <ExternalMapLinks
+              origin={origin || "출발지"}
+              destination={destination || "도착지"}
+              mode={mode}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {error && <ErrorAlert message={error} />}
 
@@ -259,15 +337,14 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
             animate={{ opacity: 1, y: 0, transition: { type: "spring", stiffness: 260, damping: 22 } }}
             exit={{ opacity: 0, y: -8, transition: { duration: 0.15 } }}
           >
-            {/* 요약 카드 */}
             <GlassCard glowColor="blue">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#0066ff]/20 text-[#4d94ff]">
                   최적 경로
                 </span>
                 <div className="flex items-center gap-1 text-slate-400 text-xs">
-                  {MODES.find((m) => m.id === mode)?.icon}
-                  <span>{MODES.find((m) => m.id === mode)?.label}</span>
+                  <Bus className="w-4 h-4" />
+                  <span>대중교통</span>
                 </div>
               </div>
               <div className="flex items-baseline gap-3">
@@ -276,7 +353,6 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
               </div>
             </GlassCard>
 
-            {/* 지도 */}
             <GlassCard className="p-2">
               <GoogleMap
                 mapContainerStyle={mapContainerStyle}
@@ -287,18 +363,13 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
                 <DirectionsRenderer
                   directions={directions}
                   options={{
-                    polylineOptions: {
-                      strokeColor: "#0066ff",
-                      strokeWeight: 5,
-                      strokeOpacity: 0.85,
-                    },
+                    polylineOptions: { strokeColor: "#0066ff", strokeWeight: 5, strokeOpacity: 0.85 },
                     suppressMarkers: false,
                   }}
                 />
               </GoogleMap>
             </GlassCard>
 
-            {/* 상세 경로 */}
             <GlassCard className="gap-0 p-0 overflow-hidden">
               <div className="px-4 py-3 border-b border-white/10">
                 <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
@@ -324,7 +395,6 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
                     <div className={`mt-0.5 flex-shrink-0 ${STEP_MODE_COLORS[step.mode] || "text-slate-400"}`}>
                       {STEP_MODE_ICONS[step.mode] || <ArrowRight className="w-3.5 h-3.5" />}
                     </div>
-
                     <div className="flex-1 min-w-0">
                       {step.transitLine && (
                         <div className="mb-1">
@@ -335,9 +405,7 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
                           </span>
                         </div>
                       )}
-
                       <p className="text-sm text-slate-200 leading-snug">{step.instruction}</p>
-
                       {step.departureStop && step.arrivalStop && (
                         <p className="text-xs text-slate-500 mt-0.5">
                           {step.departureStop}
@@ -345,7 +413,6 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
                           {step.arrivalStop}
                         </p>
                       )}
-
                       <div className="flex items-center gap-3 mt-1">
                         <span className="flex items-center gap-1 text-xs text-slate-500">
                           <Clock className="w-3 h-3" />
@@ -365,7 +432,7 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
         )}
       </AnimatePresence>
 
-      {!parsedRoute && !loading && !error && (
+      {!parsedRoute && !loading && !error && !isUnsupported && (
         <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-600">
           <Navigation className="w-10 h-10" />
           <p className="text-sm">출발지와 도착지를 입력하고 경로를 검색하세요</p>
