@@ -45,45 +45,9 @@ const mapOptions: google.maps.MapOptions = {
   styles: darkMapStyles,
 };
 
-export default function BusMap({ locations }: { locations: BusLocation[] }) {
-  const [mapsApiKey, setMapsApiKey] = useState<string>("");
-  const [keyError, setKeyError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/maps-key")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.key) {
-          setMapsApiKey(data.key);
-        } else {
-          setKeyError(data.error || "Google Maps API 키를 가져올 수 없습니다.");
-        }
-      })
-      .catch(() => setKeyError("지도를 불러오는 중 오류가 발생했습니다."));
-  }, []);
-
-  const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: mapsApiKey,
-  });
-
-  if (keyError || loadError) {
-    return (
-      <div className="glass-card p-4 border border-red-500/20 bg-red-500/5">
-        <p className="text-sm text-red-400">
-          {keyError || "지도를 불러오는 중 오류가 발생했습니다."}
-        </p>
-      </div>
-    );
-  }
-
-  if (!isLoaded || !mapsApiKey) {
-    return (
-      <div className="glass-card p-8 flex flex-col items-center gap-3 text-slate-500">
-        <MapPin className="w-8 h-8 animate-pulse" />
-        <p className="text-sm">지도 로딩 중...</p>
-      </div>
-    );
-  }
+// Inner component: only rendered once apiKey is available → useLoadScript called exactly once
+function BusMapInner({ apiKey, locations }: { apiKey: string; locations: BusLocation[] }) {
+  const { isLoaded, loadError } = useLoadScript({ googleMapsApiKey: apiKey });
 
   const validLocations = useMemo(
     () =>
@@ -101,6 +65,23 @@ export default function BusMap({ locations }: { locations: BusLocation[] }) {
         : BUSAN_CENTER,
     [validLocations]
   );
+
+  if (loadError) {
+    return (
+      <div className="glass-card p-4 border border-red-500/20 bg-red-500/5">
+        <p className="text-sm text-red-400">지도를 불러오는 중 오류가 발생했습니다.</p>
+      </div>
+    );
+  }
+
+  if (!isLoaded) {
+    return (
+      <div className="glass-card p-8 flex flex-col items-center gap-3 text-slate-500">
+        <MapPin className="w-8 h-8 animate-pulse" />
+        <p className="text-sm">지도 로딩 중...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="glass-card p-3">
@@ -134,4 +115,41 @@ export default function BusMap({ locations }: { locations: BusLocation[] }) {
       )}
     </div>
   );
+}
+
+export default function BusMap({ locations }: { locations: BusLocation[] }) {
+  const [mapsApiKey, setMapsApiKey] = useState<string>("");
+  const [keyError, setKeyError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/maps-key")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.key) {
+          setMapsApiKey(data.key);
+        } else {
+          setKeyError(data.error || "Google Maps API 키를 가져올 수 없습니다.");
+        }
+      })
+      .catch(() => setKeyError("지도를 불러오는 중 오류가 발생했습니다."));
+  }, []);
+
+  if (keyError) {
+    return (
+      <div className="glass-card p-4 border border-red-500/20 bg-red-500/5">
+        <p className="text-sm text-red-400">{keyError}</p>
+      </div>
+    );
+  }
+
+  if (!mapsApiKey) {
+    return (
+      <div className="glass-card p-8 flex flex-col items-center gap-3 text-slate-500">
+        <MapPin className="w-8 h-8 animate-pulse" />
+        <p className="text-sm">지도 로딩 중...</p>
+      </div>
+    );
+  }
+
+  return <BusMapInner apiKey={mapsApiKey} locations={locations} />;
 }
