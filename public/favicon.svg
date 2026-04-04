@@ -1,13 +1,41 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
-  <rect width="32" height="32" rx="8" fill="#0066FF"/>
-  <rect x="6" y="9" width="20" height="14" rx="3" fill="white" fill-opacity="0.15" stroke="white" stroke-width="1.5"/>
-  <rect x="8" y="11" width="7" height="5" rx="1.5" fill="white" fill-opacity="0.9"/>
-  <rect x="17" y="11" width="7" height="5" rx="1.5" fill="white" fill-opacity="0.9"/>
-  <rect x="6" y="18" width="20" height="2" fill="white" fill-opacity="0.2"/>
-  <circle cx="10" cy="24" r="2" fill="white"/>
-  <circle cx="22" cy="24" r="2" fill="white"/>
-  <rect x="14" y="11" width="4" height="12" fill="white" fill-opacity="0.1"/>
-  <circle cx="24" cy="9" r="5" fill="#00FF88"/>
-  <rect x="23" y="6.5" width="2" height="5" rx="1" fill="#0066FF"/>
-  <rect x="21.5" y="8" width="5" height="2" rx="1" fill="#0066FF"/>
+  <!-- 배경: 딥스페이스 다크 + 둥근 모서리 -->
+  <rect width="32" height="32" rx="8" fill="#0A0E27"/>
+
+  <!-- 바다 물결 (부산 해양도시) -->
+  <path d="M4 22 Q8 20 12 22 Q16 24 20 22 Q24 20 28 22 L28 28 L4 28 Z" fill="#0066FF" fill-opacity="0.35"/>
+  <path d="M4 24 Q8 22.5 12 24 Q16 25.5 20 24 Q24 22.5 28 24 L28 28 L4 28 Z" fill="#0066FF" fill-opacity="0.5"/>
+
+  <!-- 버스 몸체 -->
+  <rect x="6" y="9" width="20" height="13" rx="3" fill="#0066FF"/>
+
+  <!-- 버스 앞면 하이라이트 -->
+  <rect x="6" y="9" width="20" height="4" rx="3" fill="#1A7AFF"/>
+  <rect x="6" y="11" width="20" height="2" fill="#1A7AFF"/>
+
+  <!-- 앞 창문 -->
+  <rect x="8" y="10.5" width="6.5" height="4" rx="1.5" fill="#E8F4FF" fill-opacity="0.92"/>
+  <!-- 뒤 창문 -->
+  <rect x="17.5" y="10.5" width="6.5" height="4" rx="1.5" fill="#E8F4FF" fill-opacity="0.92"/>
+
+  <!-- 창문 반사 효과 -->
+  <rect x="8.5" y="11" width="2" height="2.5" rx="0.5" fill="white" fill-opacity="0.5"/>
+  <rect x="18" y="11" width="2" height="2.5" rx="0.5" fill="white" fill-opacity="0.5"/>
+
+  <!-- 버스 하단 라인 -->
+  <rect x="6" y="19" width="20" height="1.5" fill="#003399" fill-opacity="0.6"/>
+
+  <!-- 바퀴 -->
+  <circle cx="11" cy="23" r="2.5" fill="#0A0E27"/>
+  <circle cx="11" cy="23" r="1.4" fill="#334"/>
+  <circle cx="11" cy="23" r="0.6" fill="#00FF88"/>
+
+  <circle cx="21" cy="23" r="2.5" fill="#0A0E27"/>
+  <circle cx="21" cy="23" r="1.4" fill="#334"/>
+  <circle cx="21" cy="23" r="0.6" fill="#00FF88"/>
+
+  <!-- 실시간 LIVE 표시 (우상단 네온 점) -->
+  <circle cx="26" cy="8" r="3.5" fill="#0A0E27"/>
+  <circle cx="26" cy="8" r="2.2" fill="#00FF88" fill-opacity="0.2"/>
+  <circle cx="26" cy="8" r="1.2" fill="#00FF88"/>
 </svg>
