@@ -10,6 +10,8 @@ export type BusRoute = {
   lineNo: string;
   busType?: string;
   companyId?: string;
+  terminalStart?: string;  // 기점 정류소 이름
+  terminalEnd?: string;    // 종점 정류소 이름
 };
 
 export type BusLocation = {

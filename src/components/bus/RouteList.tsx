@@ -71,7 +71,13 @@ export default function RouteList({
                 <p className={`text-base font-bold ${isSelected ? "text-white" : "text-slate-100"}`}>
                   {route.lineNo}번
                 </p>
-                <p className="text-xs text-slate-500 truncate">ID: {route.lineId}</p>
+                {route.terminalStart && route.terminalEnd ? (
+                  <p className="text-xs text-slate-500 truncate">
+                    {route.terminalStart} → {route.terminalEnd}
+                  </p>
+                ) : (
+                  <p className="text-xs text-slate-600 truncate">{route.lineId}</p>
+                )}
               </div>
 
               <span
