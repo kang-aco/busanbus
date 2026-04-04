@@ -3,52 +3,56 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { BusArrival } from "@/lib/bus-api/types";
 
-/** lineId → { startName, endName } 캐시 (세션 내 재사용) */
-const terminalCache = new Map<string, { startName: string; endName: string }>();
+interface StopInfo { seq: number; name: string; nodeId: string; }
 
-async function fetchTerminalNames(lineId: string): Promise<{ startName: string; endName: string } | null> {
-  if (!lineId) return null;
-  if (terminalCache.has(lineId)) return terminalCache.get(lineId)!;
+/** lineId → 전체 정류소 배열 캐시 */
+const stopsCache = new Map<string, StopInfo[]>();
 
+async function fetchRouteStops(lineId: string): Promise<StopInfo[]> {
+  if (!lineId) return [];
+  if (stopsCache.has(lineId)) return stopsCache.get(lineId)!;
   try {
     const res = await fetch(`/api/bus/route-stops?lineId=${encodeURIComponent(lineId)}`);
     const data = await res.json();
-    const stops: { seq: number; name: string }[] = data.stops ?? [];
-    if (stops.length < 2) return null;
-
-    const sorted = [...stops].sort((a, b) => a.seq - b.seq);
-    const result = {
-      startName: sorted[0].name,
-      endName: sorted[sorted.length - 1].name,
-    };
-    terminalCache.set(lineId, result);
-    return result;
+    const stops: StopInfo[] = (data.stops ?? []).sort((a: StopInfo, b: StopInfo) => a.seq - b.seq);
+    stopsCache.set(lineId, stops);
+    return stops;
   } catch {
-    return null;
+    return [];
   }
 }
 
-/**
- * station1이 순수 숫자(정류소 ID)인지 판단.
- * 이름이면 그대로 "방면" 붙여 반환, 숫자면 terminalNames로 대체.
- */
-function buildDirection(
+function resolveNames(
   station1: string,
-  terminals: { startName: string; endName: string } | null
-): string {
-  if (!station1 && !terminals) return "";
+  stops: StopInfo[]
+): { direction: string; nextStop: string; terminalStart: string; terminalEnd: string } {
+  const terminalStart = stops[0]?.name ?? "";
+  const terminalEnd   = stops[stops.length - 1]?.name ?? "";
 
-  // station1이 이름 형태면 그대로 사용
+  // station1이 이름 형태면 그대로 방면으로 사용
   if (station1 && !/^\d+$/.test(station1)) {
-    return station1.endsWith("방면") ? station1 : `${station1} 방면`;
+    return {
+      direction: station1.endsWith("방면") ? station1 : `${station1} 방면`,
+      nextStop: station1,
+      terminalStart,
+      terminalEnd,
+    };
   }
 
-  // station1이 숫자(정류소ID)거나 없으면 → 종점 이름 사용
-  if (terminals) {
-    return `${terminals.endName} 방면`;
+  // station1이 숫자(nodeId)면 정류소 이름 조회
+  const matched = stops.find((s) => s.nodeId === station1);
+  const nextStop = matched?.name ?? "";
+
+  // 방면: 매칭된 정류소가 앞쪽이면 종점 방면, 뒤쪽이면 기점 방면
+  let direction = terminalEnd ? `${terminalEnd} 방면` : "";
+  if (matched && terminalStart) {
+    const midSeq = stops.length > 0 ? stops[Math.floor(stops.length / 2)].seq : 0;
+    direction = matched.seq <= midSeq
+      ? `${terminalEnd} 방면`
+      : `${terminalStart} 방면`;
   }
 
-  return "";
+  return { direction, nextStop, terminalStart, terminalEnd };
 }
 
 export function useBusArrivals(stopId: string | null) {
@@ -59,7 +63,6 @@ export function useBusArrivals(stopId: string | null) {
 
   const fetchArrivals = useCallback(async () => {
     if (!stopId) return;
-
     const requestId = ++requestIdRef.current;
     setArrivalLoading(true);
     setArrivalError(null);
@@ -69,26 +72,21 @@ export function useBusArrivals(stopId: string | null) {
         cache: "no-store",
       });
       const data = await res.json();
-
       if (!res.ok) throw new Error(data?.message || data?.error || "도착 정보 조회 실패");
 
       const raw: BusArrival[] = Array.isArray(data?.arrivals) ? data.arrivals : [];
 
-      // 고유 lineId 별로 터미널 이름 병렬 조회
+      // 고유 lineId 별 전체 정류소 병렬 조회
       const uniqueLineIds = [...new Set(raw.map((a) => a.lineId).filter(Boolean))] as string[];
-      const terminalResults = await Promise.all(
-        uniqueLineIds.map((lid) => fetchTerminalNames(lid).then((t) => [lid, t] as const))
+      const stopsResults = await Promise.all(
+        uniqueLineIds.map((lid) => fetchRouteStops(lid).then((s) => [lid, s] as const))
       );
-      const terminalMap = new Map(terminalResults);
+      const stopsMap = new Map(stopsResults);
 
       const enriched: BusArrival[] = raw.map((a) => {
-        const terminals = a.lineId ? (terminalMap.get(a.lineId) ?? null) : null;
-        return {
-          ...a,
-          direction:     buildDirection(a.station1 ?? "", terminals),
-          terminalStart: terminals?.startName ?? "",
-          terminalEnd:   terminals?.endName   ?? "",
-        };
+        const stops = a.lineId ? (stopsMap.get(a.lineId) ?? []) : [];
+        const resolved = resolveNames(a.station1 ?? "", stops);
+        return { ...a, ...resolved };
       });
 
       if (requestId === requestIdRef.current) {
@@ -97,7 +95,6 @@ export function useBusArrivals(stopId: string | null) {
         );
       }
     } catch (err: any) {
-      console.error("[Arrival Error]:", err);
       if (requestId === requestIdRef.current) {
         setArrivals([]);
         setArrivalError(err?.message || "도착 정보 조회 중 오류가 발생했습니다.");

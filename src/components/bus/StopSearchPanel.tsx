@@ -108,12 +108,24 @@ export default function StopSearchPanel({ onStopSelect }: StopSearchPanelProps) 
                 aria-label={`${stop.stopName} 정류소 선택`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-[#0066ff]/15 flex items-center justify-center flex-shrink-0 group-hover:bg-[#0066ff]/25 transition-colors">
-                    <MapPin className="w-4 h-4 text-[#4d94ff]" />
+                  <div className="w-8 h-8 rounded-lg bg-[#00ff88]/10 flex items-center justify-center flex-shrink-0 group-hover:bg-[#00ff88]/20 transition-colors">
+                    <MapPin className="w-4 h-4 text-[#00ff88]" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white truncate">{stop.stopName}</p>
-                    <p className="text-xs text-slate-500">번호: {stop.arsno || stop.stopId}</p>
+                    <p className="text-sm font-semibold text-white truncate">{stop.stopName}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      {stop.arsno && (
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#0066ff]/15 text-[#4d94ff] border border-[#0066ff]/20">
+                          ARS {stop.arsno}
+                        </span>
+                      )}
+                      <span className="text-[10px] text-slate-600 font-mono">
+                        #{stop.stopId}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-5 h-5 rounded-full bg-[#00ff88]/10 flex items-center justify-center flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <MapPin className="w-3 h-3 text-[#00ff88]" />
                   </div>
                 </div>
               </motion.button>
