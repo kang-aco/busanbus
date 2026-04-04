@@ -1,7 +1,7 @@
 "use client";
 
-import { Search, MapPin, Loader2 } from "lucide-react";
-import React, { useState } from "react";
+import { Search, MapPin, Loader2, ArrowRight } from "lucide-react";
+import React, { useEffect, useState } from "react";
 import { motion } from "motion/react";
 import ErrorAlert from "@/components/ui/ErrorAlert";
 
@@ -17,9 +17,26 @@ interface StopSearchPanelProps {
   onStopSelect: (stopId: string, stopName: string) => void;
 }
 
+/** 정류소별 다음 정류소 이름 비동기 조회 */
+async function fetchNextStopName(stopId: string): Promise<string> {
+  try {
+    const res = await fetch(`/api/bus/arrival?stopId=${encodeURIComponent(stopId)}`, {
+      cache: "no-store",
+    });
+    const data = await res.json();
+    const arrivals: { station1?: string }[] = data?.arrivals ?? [];
+    // station1이 이름(숫자가 아님)이면 바로 사용
+    const name = arrivals.find((a) => a.station1 && !/^\d+$/.test(a.station1))?.station1;
+    return name ?? "";
+  } catch {
+    return "";
+  }
+}
+
 export default function StopSearchPanel({ onStopSelect }: StopSearchPanelProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [stops, setStops] = useState<Stop[]>([]);
+  const [nextStopNames, setNextStopNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,6 +44,7 @@ export default function StopSearchPanel({ onStopSelect }: StopSearchPanelProps) 
     if (!searchQuery.trim()) return;
     setLoading(true);
     setError(null);
+    setNextStopNames({});
 
     try {
       const response = await fetch(
@@ -38,8 +56,9 @@ export default function StopSearchPanel({ onStopSelect }: StopSearchPanelProps) 
         throw new Error(data.error || data.details || `API Error: ${response.status}`);
       }
 
-      setStops(data.stops || []);
-      if (!data.stops || data.stops.length === 0) {
+      const found: Stop[] = data.stops || [];
+      setStops(found);
+      if (found.length === 0) {
         setError("검색 결과가 없습니다.");
       }
     } catch (err: any) {
@@ -49,6 +68,17 @@ export default function StopSearchPanel({ onStopSelect }: StopSearchPanelProps) 
       setLoading(false);
     }
   };
+
+  // 정류소 목록이 바뀌면 각 정류소의 다음 정류소 이름 조회
+  useEffect(() => {
+    if (stops.length === 0) return;
+    stops.forEach(async (stop) => {
+      const name = await fetchNextStopName(stop.stopId);
+      if (name) {
+        setNextStopNames((prev) => ({ ...prev, [stop.stopId]: name }));
+      }
+    });
+  }, [stops]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") handleSearch();
@@ -94,42 +124,47 @@ export default function StopSearchPanel({ onStopSelect }: StopSearchPanelProps) 
             animate="show"
             variants={{ hidden: {}, show: { transition: { staggerChildren: 0.05 } } }}
           >
-            {stops.map((stop) => (
-              <motion.button
-                key={stop.stopId}
-                onClick={() => onStopSelect(stop.stopId, stop.stopName)}
-                variants={{
-                  hidden: { opacity: 0, y: 10 },
-                  show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } },
-                }}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.98 }}
-                className="glass-card hover:bg-white/8 hover:border-white/20 text-left transition-colors group"
-                aria-label={`${stop.stopName} 정류소 선택`}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-[#00ff88]/10 flex items-center justify-center flex-shrink-0 group-hover:bg-[#00ff88]/20 transition-colors">
-                    <MapPin className="w-4 h-4 text-[#00ff88]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-white truncate">{stop.stopName}</p>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      {stop.arsno && (
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#0066ff]/15 text-[#4d94ff] border border-[#0066ff]/20">
-                          ARS {stop.arsno}
-                        </span>
-                      )}
-                      <span className="text-[10px] text-slate-600 font-mono">
-                        #{stop.stopId}
-                      </span>
+            {stops.map((stop) => {
+              const nextStop = nextStopNames[stop.stopId];
+              return (
+                <motion.button
+                  key={stop.stopId}
+                  onClick={() => onStopSelect(stop.stopId, stop.stopName)}
+                  variants={{
+                    hidden: { opacity: 0, y: 10 },
+                    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } },
+                  }}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="glass-card hover:bg-white/8 hover:border-white/20 text-left transition-colors group"
+                  aria-label={`${stop.stopName} 정류소 선택`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-[#00ff88]/10 flex items-center justify-center flex-shrink-0 group-hover:bg-[#00ff88]/20 transition-colors">
+                      <MapPin className="w-4 h-4 text-[#00ff88]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-white truncate">{stop.stopName}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {nextStop ? (
+                          <span className="flex items-center gap-1 text-[10px] text-emerald-400">
+                            <ArrowRight className="w-2.5 h-2.5 flex-shrink-0" />
+                            {nextStop} 방면
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-slate-600 font-mono">
+                            ARS {stop.arsno}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="w-5 h-5 rounded-full bg-[#00ff88]/10 flex items-center justify-center flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <MapPin className="w-3 h-3 text-[#00ff88]" />
                     </div>
                   </div>
-                  <div className="w-5 h-5 rounded-full bg-[#00ff88]/10 flex items-center justify-center flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <MapPin className="w-3 h-3 text-[#00ff88]" />
-                  </div>
-                </div>
-              </motion.button>
-            ))}
+                </motion.button>
+              );
+            })}
           </motion.div>
         </div>
       )}
