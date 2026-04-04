@@ -9,5 +9,8 @@ export async function onRequest(context: any) {
     );
   }
 
-  return Response.json({ key: MAPS_KEY });
+  return Response.json({
+    key: MAPS_KEY,
+    mapId: env.GOOGLE_MAPS_MAP_ID || null,
+  });
 }

@@ -36,17 +36,8 @@ const darkMapStyles: google.maps.MapTypeStyle[] = [
   { featureType: "water", elementType: "labels.text.stroke", stylers: [{ color: "#0d1117" }] },
 ];
 
-const mapOptions: google.maps.MapOptions = {
-  disableDefaultUI: false,
-  zoomControl: true,
-  mapTypeControl: false,
-  streetViewControl: false,
-  fullscreenControl: false,
-  styles: darkMapStyles,
-};
-
 // Inner component: only rendered once apiKey is available → useLoadScript called exactly once
-function BusMapInner({ apiKey, locations }: { apiKey: string; locations: BusLocation[] }) {
+function BusMapInner({ apiKey, mapId, locations }: { apiKey: string; mapId: string | null; locations: BusLocation[] }) {
   const { isLoaded, loadError } = useLoadScript({ googleMapsApiKey: apiKey });
 
   const validLocations = useMemo(
@@ -83,6 +74,16 @@ function BusMapInner({ apiKey, locations }: { apiKey: string; locations: BusLoca
     );
   }
 
+  const mapOptions: google.maps.MapOptions = {
+    disableDefaultUI: false,
+    zoomControl: true,
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: false,
+    styles: darkMapStyles,
+    ...(mapId ? { mapId } : {}),
+  };
+
   return (
     <div className="glass-card p-3">
       <GoogleMap
@@ -91,22 +92,27 @@ function BusMapInner({ apiKey, locations }: { apiKey: string; locations: BusLoca
         center={center}
         options={mapOptions}
       >
-        {validLocations.map((bus) => (
-          <Marker
-            key={bus.vehId}
-            position={{
-              lat: parseFloat(bus.gpsY!),
-              lng: parseFloat(bus.gpsX!),
-            }}
-            label={{
-              text: bus.lineNo || "🚌",
-              color: "#00ff88",
-              fontSize: "11px",
-              fontWeight: "bold",
-            }}
-            title={`${bus.lineNo || "버스"} - ${bus.nodeNm || "위치 정보 없음"}`}
-          />
-        ))}
+        {validLocations.map((bus) => {
+          const position = {
+            lat: parseFloat(bus.gpsY!),
+            lng: parseFloat(bus.gpsX!),
+          };
+          const title = `${bus.lineNo || "버스"} - ${bus.nodeNm || "위치 정보 없음"}`;
+
+          return (
+            <Marker
+              key={bus.vehId}
+              position={position}
+              label={{
+                text: bus.lineNo || "🚌",
+                color: "#00ff88",
+                fontSize: "11px",
+                fontWeight: "bold",
+              }}
+              title={title}
+            />
+          );
+        })}
       </GoogleMap>
       {validLocations.length === 0 && (
         <p className="mt-2 text-center text-xs text-slate-500">
@@ -119,6 +125,7 @@ function BusMapInner({ apiKey, locations }: { apiKey: string; locations: BusLoca
 
 export default function BusMap({ locations }: { locations: BusLocation[] }) {
   const [mapsApiKey, setMapsApiKey] = useState<string>("");
+  const [mapsMapId, setMapsMapId] = useState<string | null>(null);
   const [keyError, setKeyError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -127,6 +134,7 @@ export default function BusMap({ locations }: { locations: BusLocation[] }) {
       .then((data) => {
         if (data.key) {
           setMapsApiKey(data.key);
+          setMapsMapId(data.mapId ?? null);
         } else {
           setKeyError(data.error || "Google Maps API 키를 가져올 수 없습니다.");
         }
@@ -151,5 +159,5 @@ export default function BusMap({ locations }: { locations: BusLocation[] }) {
     );
   }
 
-  return <BusMapInner apiKey={mapsApiKey} locations={locations} />;
+  return <BusMapInner apiKey={mapsApiKey} mapId={mapsMapId} locations={locations} />;
 }
