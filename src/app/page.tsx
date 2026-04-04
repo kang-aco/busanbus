@@ -16,6 +16,7 @@ import GlassCard from "@/components/ui/GlassCard";
 import { useBusSearch } from "@/hooks/useBusSearch";
 import { useBusLocations } from "@/hooks/useBusLocations";
 import { useBusArrivals } from "@/hooks/useBusArrivals";
+import { useBusRouteStops } from "@/hooks/useBusRouteStops";
 import { useFavorites } from "@/hooks/useFavorites";
 import { routeDisplayNumber } from "@/lib/utils";
 import type { BusRoute } from "@/lib/bus-api/types";
@@ -57,6 +58,7 @@ export default function Home() {
     refreshLocations,
   } = useBusLocations(selectedRoute?.lineId || null);
   const { arrivals = [], arrivalLoading, arrivalError } = useBusArrivals(selectedStop?.id ?? null);
+  const { stops: routeStops } = useBusRouteStops(selectedRoute?.lineId ?? null);
   const { favorites = [], toggleFavorite } = useFavorites();
 
   const isFavorite = (lineId: string) => favorites.includes(lineId);
@@ -207,7 +209,11 @@ export default function Home() {
                         <RouteDetailPanel route={selectedRoute} locations={busLocations} />
                       </GlassCard>
 
-                      <BusMap locations={busLocations} />
+                      <BusMap
+                        locations={busLocations}
+                        routeStops={routeStops}
+                        lineId={selectedRoute?.lineId ?? null}
+                      />
                     </div>
                   )}
 
