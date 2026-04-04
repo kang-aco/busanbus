@@ -24,10 +24,32 @@ async function fetchNextStopName(stopId: string): Promise<string> {
       cache: "no-store",
     });
     const data = await res.json();
-    const arrivals: { station1?: string }[] = data?.arrivals ?? [];
-    // station1이 이름(숫자가 아님)이면 바로 사용
-    const name = arrivals.find((a) => a.station1 && !/^\d+$/.test(a.station1))?.station1;
-    return name ?? "";
+    const arrivals: { lineId?: string; station1?: string }[] = data?.arrivals ?? [];
+
+    // 1단계: station1이 이름 형태(숫자·ARS 번호 아님)면 바로 사용
+    const directName = arrivals.find(
+      (a) => a.station1 && !/^\d+$/.test(a.station1) && !/^ARS\d+$/i.test(a.station1)
+    )?.station1;
+    if (directName) return directName;
+
+    // 2단계: station1이 ID면 route-stops로 이름 역조회
+    const first = arrivals.find((a) => a.lineId && a.station1);
+    if (!first?.lineId || !first?.station1) return "";
+
+    const stopsRes = await fetch(`/api/bus/route-stops?lineId=${encodeURIComponent(first.lineId)}`);
+    const stopsData = await stopsRes.json();
+    const stops: { name: string; nodeId: string; bstopid?: string; arsno?: string }[] =
+      stopsData?.stops ?? [];
+
+    const s1 = first.station1;
+    const arsNum = /^ARS(\d+)$/i.test(s1) ? s1.replace(/^ARS/i, "") : null;
+    const matched = stops.find(
+      (s) =>
+        s.nodeId === s1 ||
+        s.bstopid === s1 ||
+        (arsNum && (s.arsno === arsNum || s.nodeId === arsNum || s.bstopid === arsNum))
+    );
+    return matched?.name ?? "";
   } catch {
     return "";
   }
