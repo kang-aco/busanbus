@@ -100,7 +100,42 @@ interface ParsedStep {
 interface ParsedRoute {
   duration: string;
   distance: string;
+  departureTime?: string;
+  arrivalTime?: string;
+  transitLines: string[];
+  numTransfers: number;
   steps: ParsedStep[];
+}
+
+/** DirectionsRoute → 요약/상세가 담긴 ParsedRoute 로 변환 */
+function parseRoute(route: google.maps.DirectionsRoute): ParsedRoute {
+  const leg = route.legs[0];
+  const steps: ParsedStep[] = (leg?.steps ?? []).map((step) => ({
+    instruction: stripHtml(step.instructions),
+    duration: step.duration?.text ?? "",
+    distance: step.distance?.text ?? "",
+    mode: step.travel_mode,
+    transitLine: step.transit?.line?.short_name || step.transit?.line?.name,
+    numStops: step.transit?.num_stops,
+    departureStop: step.transit?.departure_stop?.name,
+    arrivalStop: step.transit?.arrival_stop?.name,
+    departureTime: step.transit?.departure_time?.text,
+  }));
+
+  const transitSteps = (leg?.steps ?? []).filter((s) => s.travel_mode === "TRANSIT");
+  const transitLines = transitSteps
+    .map((s) => s.transit?.line?.short_name || s.transit?.line?.name || "")
+    .filter(Boolean);
+
+  return {
+    duration: leg?.duration?.text ?? "",
+    distance: leg?.distance?.text ?? "",
+    departureTime: transitSteps[0]?.transit?.departure_time?.text,
+    arrivalTime: transitSteps[transitSteps.length - 1]?.transit?.arrival_time?.text,
+    transitLines,
+    numTransfers: Math.max(0, transitLines.length - 1),
+    steps,
+  };
 }
 
 function ExternalMapLinks({
@@ -160,7 +195,8 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
-  const [parsedRoute, setParsedRoute] = useState<ParsedRoute | null>(null);
+  const [parsedRoutes, setParsedRoutes] = useState<ParsedRoute[]>([]);
+  const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
 
   const { isLoaded } = useLoadScript({ googleMapsApiKey: apiKey });
 
@@ -168,7 +204,8 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
 
   const reset = useCallback(() => {
     setDirections(null);
-    setParsedRoute(null);
+    setParsedRoutes([]);
+    setSelectedRouteIndex(0);
     setError(null);
   }, []);
 
@@ -189,7 +226,8 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
       setLoading(true);
       setError(null);
       setDirections(null);
-      setParsedRoute(null);
+      setParsedRoutes([]);
+      setSelectedRouteIndex(0);
 
       let from = origin.trim();
       let to = destination.trim();
@@ -201,6 +239,7 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
         destination: to,
         travelMode: google.maps.TravelMode.TRANSIT,
         region: "kr",
+        provideRouteAlternatives: true,
         transitOptions: {
           modes: [google.maps.TransitMode.BUS, google.maps.TransitMode.SUBWAY],
         },
@@ -210,22 +249,8 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
         setLoading(false);
         if (status === google.maps.DirectionsStatus.OK && result) {
           setDirections(result);
-          const leg = result.routes[0].legs[0];
-          setParsedRoute({
-            duration: leg.duration?.text ?? "",
-            distance: leg.distance?.text ?? "",
-            steps: leg.steps.map((step) => ({
-              instruction: stripHtml(step.instructions),
-              duration: step.duration?.text ?? "",
-              distance: step.distance?.text ?? "",
-              mode: step.travel_mode,
-              transitLine: step.transit?.line?.short_name || step.transit?.line?.name,
-              numStops: step.transit?.num_stops,
-              departureStop: step.transit?.departure_stop?.name,
-              arrivalStop: step.transit?.arrival_stop?.name,
-              departureTime: step.transit?.departure_time?.text,
-            })),
-          });
+          setSelectedRouteIndex(0);
+          setParsedRoutes(result.routes.map(parseRoute));
         } else {
           const messages: Partial<Record<google.maps.DirectionsStatus, string>> = {
             [google.maps.DirectionsStatus.NOT_FOUND]: "출발지 또는 도착지를 찾을 수 없습니다.",
@@ -331,28 +356,77 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
       {error && <ErrorAlert message={error} />}
 
       <AnimatePresence>
-        {parsedRoute && directions && (
+        {parsedRoutes.length > 0 && directions && (
           <motion.div
             className="flex flex-col gap-3"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0, transition: { type: "spring", stiffness: 260, damping: 22 } }}
             exit={{ opacity: 0, y: -8, transition: { duration: 0.15 } }}
           >
-            <GlassCard glowColor="blue">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#2563eb]/12 text-[#2563eb]">
-                  최적 경로
-                </span>
+            {/* 경로 옵션 목록 — 클릭하여 선택 */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between px-1">
+                <p className="text-xs text-slate-500">{parsedRoutes.length}개의 경로</p>
                 <div className="flex items-center gap-1 text-slate-500 text-xs">
-                  <Bus className="w-4 h-4" />
+                  <Bus className="w-3.5 h-3.5" />
                   <span>대중교통</span>
                 </div>
               </div>
-              <div className="flex items-baseline gap-3">
-                <span className="text-3xl font-bold text-slate-900 font-mono">{parsedRoute.duration}</span>
-                <span className="text-sm text-slate-500">{parsedRoute.distance}</span>
-              </div>
-            </GlassCard>
+              {parsedRoutes.map((r, i) => {
+                const active = i === selectedRouteIndex;
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setSelectedRouteIndex(i)}
+                    aria-pressed={active}
+                    className={`text-left rounded-2xl px-4 py-3 border transition-all ${
+                      active
+                        ? "border-[#2563eb]/50 bg-[#2563eb]/[0.06] shadow-[0_8px_24px_rgba(37,99,235,0.14)]"
+                        : "border-slate-200 bg-white/60 hover:border-slate-300 hover:bg-white"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-baseline gap-2 min-w-0">
+                        {i === 0 && (
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-[#2563eb]/12 text-[#2563eb] flex-shrink-0">
+                            추천
+                          </span>
+                        )}
+                        <span className="text-xl font-bold text-slate-900 font-mono">{r.duration}</span>
+                        <span className="text-xs text-slate-500 truncate">{r.distance}</span>
+                      </div>
+                      <span className="text-[11px] text-slate-500 flex-shrink-0">
+                        {r.numTransfers === 0 ? "환승 없음" : `환승 ${r.numTransfers}회`}
+                      </span>
+                    </div>
+
+                    {r.transitLines.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-1 mt-2">
+                        {r.transitLines.map((ln, li) => (
+                          <span key={li} className="inline-flex items-center gap-1">
+                            {li > 0 && <ArrowRight className="w-3 h-3 text-slate-400" />}
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#2563eb]/12 text-[#2563eb]">
+                              <Bus className="w-3 h-3" />
+                              {ln}
+                            </span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {(r.departureTime || r.arrivalTime) && (
+                      <p className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {r.departureTime && <span>{r.departureTime} 출발</span>}
+                        {r.departureTime && r.arrivalTime && <ArrowRight className="w-2.5 h-2.5" />}
+                        {r.arrivalTime && <span>{r.arrivalTime} 도착</span>}
+                      </p>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
 
             <GlassCard className="p-2">
               <GoogleMap
@@ -362,8 +436,10 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
                 options={{ styles: lightMapStyles, disableDefaultUI: true, zoomControl: true }}
               >
                 <DirectionsRenderer
+                  key={selectedRouteIndex}
                   directions={directions}
                   options={{
+                    routeIndex: selectedRouteIndex,
                     polylineOptions: { strokeColor: "#2563eb", strokeWeight: 5, strokeOpacity: 0.9 },
                     suppressMarkers: false,
                   }}
@@ -379,12 +455,13 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
                 </h3>
               </div>
               <motion.div
+                key={selectedRouteIndex}
                 className="flex flex-col divide-y divide-slate-100"
                 initial="hidden"
                 animate="show"
                 variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06 } } }}
               >
-                {parsedRoute.steps.map((step, idx) => (
+                {(parsedRoutes[selectedRouteIndex] ?? parsedRoutes[0]).steps.map((step, idx) => (
                   <motion.div
                     key={idx}
                     className="flex gap-3 px-4 py-3"
@@ -433,7 +510,7 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
         )}
       </AnimatePresence>
 
-      {!parsedRoute && !loading && !error && !isUnsupported && (
+      {parsedRoutes.length === 0 && !loading && !error && !isUnsupported && (
         <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-600">
           <Navigation className="w-10 h-10" />
           <p className="text-sm">출발지와 도착지를 입력하고 경로를 검색하세요</p>
