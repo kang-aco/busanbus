@@ -4,6 +4,8 @@
 
 # Run and deploy your AI Studio app
 
+<!-- build cache 적용 후 배포 시간 측정용 커밋 -->
+
 This contains everything you need to run your app locally.
 
 View your app in AI Studio: https://ai.studio/apps/772c5aed-e160-441b-afc3-0f3cfcd34658
