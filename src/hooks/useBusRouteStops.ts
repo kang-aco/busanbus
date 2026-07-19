@@ -6,8 +6,10 @@ export interface RouteStop {
   nodeId: string;
   bstopid?: string;
   arsno?: string;
-  lat: number;
-  lng: number;
+  bus?: string;      // 이 정류소에 현재 위치한 버스 차량번호 (있을 때만)
+  rpoint?: string;   // 회차지 등 구분
+  lat?: number;      // 버스가 있는 정류소에만 좌표가 채워짐
+  lng?: number;
 }
 
 export function useBusRouteStops(lineId: string | null) {

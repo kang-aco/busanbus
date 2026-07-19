@@ -78,29 +78,39 @@ function BusMapInner({ apiKey, mapId, locations, routeStops, lineId }: BusMapInn
 
   const routeColor = useMemo(() => (lineId ? getRouteColor(lineId) : "#2563eb"), [lineId]);
 
-  const routePath = useMemo(
-    () => routeStops.map((s) => ({ lat: s.lat, lng: s.lng })),
+  // busInfoByRouteId 는 버스가 있는 정류소에만 좌표를 제공하므로 좌표 있는 것만 사용
+  const stopsWithCoord = useMemo(
+    () =>
+      routeStops.filter(
+        (s): s is typeof s & { lat: number; lng: number } =>
+          typeof s.lat === "number" && typeof s.lng === "number"
+      ),
     [routeStops]
   );
 
-  // 지도 중심: 버스 위치 > 노선 중간 정류장 > 부산 중심
+  const routePath = useMemo(
+    () => stopsWithCoord.map((s) => ({ lat: s.lat, lng: s.lng })),
+    [stopsWithCoord]
+  );
+
+  // 지도 중심: 버스 위치 > 좌표 있는 정류장 > 부산 중심
   const center = useMemo(() => {
     if (validLocations.length > 0) {
       return { lat: parseFloat(validLocations[0].gpsY!), lng: parseFloat(validLocations[0].gpsX!) };
     }
-    if (routeStops.length > 0) {
-      const mid = routeStops[Math.floor(routeStops.length / 2)];
+    if (stopsWithCoord.length > 0) {
+      const mid = stopsWithCoord[Math.floor(stopsWithCoord.length / 2)];
       return { lat: mid.lat, lng: mid.lng };
     }
     return BUSAN_CENTER;
-  }, [validLocations, routeStops]);
+  }, [validLocations, stopsWithCoord]);
 
   // 노선 전체가 보이도록 줌 계산
   const zoom = useMemo(() => {
-    if (routeStops.length > 1) return 13;
+    if (stopsWithCoord.length > 1) return 13;
     if (validLocations.length > 0) return 14;
     return 12;
-  }, [routeStops.length, validLocations.length]);
+  }, [stopsWithCoord.length, validLocations.length]);
 
   if (loadError) {
     return (
@@ -121,6 +131,9 @@ function BusMapInner({ apiKey, mapId, locations, routeStops, lineId }: BusMapInn
 
   const firstStop = routeStops[0];
   const lastStop = routeStops[routeStops.length - 1];
+  // 지도 마커는 좌표가 있는 정류소로 (실제 기·종점은 좌표가 없을 수 있음)
+  const mapFirst = stopsWithCoord[0];
+  const mapLast = stopsWithCoord[stopsWithCoord.length - 1];
 
   return (
     <div className="glass-card p-3 flex flex-col gap-2">
@@ -169,11 +182,11 @@ function BusMapInner({ apiKey, mapId, locations, routeStops, lineId }: BusMapInn
           />
         )}
 
-        {/* 기종점 마커 */}
-        {firstStop && (
+        {/* 좌표가 있는 양 끝 정류소 마커 */}
+        {mapFirst && (
           <Marker
-            position={{ lat: firstStop.lat, lng: firstStop.lng }}
-            title={`기점: ${firstStop.name}`}
+            position={{ lat: mapFirst.lat, lng: mapFirst.lng }}
+            title={mapFirst.name}
             label={{ text: "출", color: "#fff", fontSize: "10px", fontWeight: "bold" }}
             icon={{
               path: google.maps.SymbolPath.CIRCLE,
@@ -186,10 +199,10 @@ function BusMapInner({ apiKey, mapId, locations, routeStops, lineId }: BusMapInn
             zIndex={3}
           />
         )}
-        {lastStop && lastStop.nodeId !== firstStop?.nodeId && (
+        {mapLast && mapLast.nodeId !== mapFirst?.nodeId && (
           <Marker
-            position={{ lat: lastStop.lat, lng: lastStop.lng }}
-            title={`종점: ${lastStop.name}`}
+            position={{ lat: mapLast.lat, lng: mapLast.lng }}
+            title={mapLast.name}
             label={{ text: "종", color: "#fff", fontSize: "10px", fontWeight: "bold" }}
             icon={{
               path: google.maps.SymbolPath.CIRCLE,
