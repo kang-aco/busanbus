@@ -32,6 +32,20 @@ export async function onRequest(context: any) {
     return m ? m[1].trim() : "";
   };
 
+  // 첫 bstopnm 의 원본 바이트를 hex 로 추출 (진짜 인코딩 판별용)
+  const bytes = new Uint8Array(buf);
+  const ascii = new TextDecoder("latin1").decode(buf); // 바이트=코드포인트 1:1
+  const startTag = "<bstopnm>";
+  const endTag = "</bstopnm>";
+  const si = ascii.indexOf(startTag);
+  const ei = ascii.indexOf(endTag, si);
+  let nameHex = "";
+  if (si !== -1 && ei !== -1) {
+    const from = si + startTag.length;
+    const slice = bytes.slice(from, ei);
+    nameHex = Array.from(slice).map((b) => b.toString(16).padStart(2, "0")).join(" ");
+  }
+
   const withCarno = euckrItems.filter((it) => getTag(it[1], "carno")).length;
   const withGps = euckrItems.filter(
     (it) => getTag(it[1], "gpsx") || getTag(it[1], "lin")
@@ -42,6 +56,7 @@ export async function onRequest(context: any) {
     lineId,
     contentType,
     itemCount: items.length,
+    nameHex,
     withCarno,
     withGps,
     firstItemTags: items[0] ? tagNames(items[0][1]) : [],
