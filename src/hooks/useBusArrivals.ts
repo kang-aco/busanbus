@@ -127,11 +127,14 @@ export function useBusArrivals(stopId: string | null, nearbyIds: string[] = []) 
       }
     };
 
-    // 정류소+노선 단위로 중복 제거하며 누적 → 도착 임박순 정렬
+    // 화면에 보이는 "노선번호+방면"이 같으면 동일 버스로 보고 하나만(가장 빠른 도착) 유지.
+    // 인접 폴을 합칠 때 같은 노선이 중복 표시되는 것을 방지한다.
     const accum = new Map<string, BusArrival>();
     const mergeAndSet = (items: BusArrival[]) => {
       for (const a of items) {
-        accum.set(`${a.stopId}-${a.lineId || a.lineNo}`, a);
+        const key = `${a.lineNo}|${a.direction ?? ""}`;
+        const existing = accum.get(key);
+        if (!existing || min1Value(a) < min1Value(existing)) accum.set(key, a);
       }
       if (!alive()) return;
       const merged = [...accum.values()].sort((x, y) => min1Value(x) - min1Value(y));
