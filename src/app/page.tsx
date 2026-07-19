@@ -32,6 +32,7 @@ const TABS: { id: Tab; label: string; icon: JSX.Element }[] = [
 interface SelectedStop {
   id: string;
   name: string;
+  nearbyIds?: string[];
 }
 
 function formatTime(date: Date): string {
@@ -57,7 +58,10 @@ export default function Home() {
     lastUpdated,
     refreshLocations,
   } = useBusLocations(selectedRoute?.lineId || null);
-  const { arrivals = [], arrivalLoading, arrivalError } = useBusArrivals(selectedStop?.id ?? null);
+  const { arrivals = [], arrivalLoading, arrivalError } = useBusArrivals(
+    selectedStop?.id ?? null,
+    selectedStop?.nearbyIds ?? []
+  );
   const { stops: routeStops } = useBusRouteStops(selectedRoute?.lineId ?? null);
   const { favorites = [], toggleFavorite } = useFavorites();
 
@@ -252,7 +256,9 @@ export default function Home() {
               {activeTab === "stops" && (
                 <div className="flex flex-col gap-4">
                   <GlassCard>
-                    <StopSearchPanel onStopSelect={(id, name) => setSelectedStop({ id, name })} />
+                    <StopSearchPanel
+                      onStopSelect={(id, name, nearbyIds) => setSelectedStop({ id, name, nearbyIds })}
+                    />
                   </GlassCard>
 
                   {selectedStop && (
