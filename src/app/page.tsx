@@ -3,13 +3,14 @@
 import type { JSX } from "react";
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Bus, MapPin, Navigation, Loader2, RefreshCw, X, Star } from "lucide-react";
+import { Bus, MapPin, Navigation, Loader2, RefreshCw, X, Star, LocateFixed } from "lucide-react";
 import BusSearchPanel from "@/components/bus/BusSearchPanel";
 import RouteList from "@/components/bus/RouteList";
 import RouteDetailPanel from "@/components/bus/RouteDetailPanel";
 import ArrivalPanel from "@/components/bus/ArrivalPanel";
 import BusMap from "@/components/bus/BusMap";
 import StopSearchPanel from "@/components/bus/StopSearchPanel";
+import NearbyPanel from "@/components/bus/NearbyPanel";
 import DirectionsPanel from "@/components/directions/DirectionsPanel";
 import ErrorAlert from "@/components/ui/ErrorAlert";
 import GlassCard from "@/components/ui/GlassCard";
@@ -21,9 +22,10 @@ import { useFavorites } from "@/hooks/useFavorites";
 import { routeDisplayNumber } from "@/lib/utils";
 import type { BusRoute } from "@/lib/bus-api/types";
 
-type Tab = "routes" | "stops" | "directions";
+type Tab = "nearby" | "routes" | "stops" | "directions";
 
 const TABS: { id: Tab; label: string; icon: JSX.Element }[] = [
+  { id: "nearby", label: "내 주변", icon: <LocateFixed className="w-5 h-5" /> },
   { id: "routes", label: "노선", icon: <Bus className="w-5 h-5" /> },
   { id: "stops", label: "정류소", icon: <MapPin className="w-5 h-5" /> },
   { id: "directions", label: "길찾기", icon: <Navigation className="w-5 h-5" /> },
@@ -46,7 +48,7 @@ const tabVariants = {
 };
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<Tab>("routes");
+  const [activeTab, setActiveTab] = useState<Tab>("nearby");
   const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(null);
   const [selectedStop, setSelectedStop] = useState<SelectedStop | null>(null);
 
@@ -126,6 +128,8 @@ export default function Home() {
               animate="center"
               exit="exit"
             >
+
+              {activeTab === "nearby" && <NearbyPanel />}
 
               {activeTab === "routes" && (
                 <div className="flex flex-col gap-4">
