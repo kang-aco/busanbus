@@ -2,16 +2,26 @@
 
 @layer base {
   :root {
-    --color-primary: #0066ff;
-    --color-primary-light: #4d94ff;
-    --color-accent: #00ff88;
-    --color-accent-dim: rgba(0, 255, 136, 0.15);
-    --color-space-900: #0a0e27;
-    --color-space-800: #141b3d;
-    --color-space-700: #1f294d;
-    --color-space-600: #2a3560;
-    --glass-bg: rgba(255, 255, 255, 0.05);
-    --glass-border: rgba(255, 255, 255, 0.1);
+    /* Brand — refined indigo/blue */
+    --color-primary: #2563eb;
+    --color-primary-light: #3b82f6;
+    --color-primary-dark: #1d4ed8;
+    /* LIVE accent — emerald (visible on light backgrounds) */
+    --color-accent: #10b981;
+    --color-accent-dark: #059669;
+    --color-accent-dim: rgba(16, 185, 129, 0.12);
+
+    /* Light surface scale (replaces dark space-*) */
+    --color-surface-50: #f6f8fc;
+    --color-surface-100: #eef2f9;
+    --color-surface-200: #e2e8f2;
+    --color-surface-300: #cbd5e1;
+
+    /* Glass on light background */
+    --glass-bg: rgba(255, 255, 255, 0.72);
+    --glass-border: rgba(15, 23, 42, 0.07);
+    --glass-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
+    --glass-shadow-hover: 0 12px 36px rgba(15, 23, 42, 0.12);
   }
 
   * {
@@ -26,8 +36,12 @@
   }
 
   body {
-    background-color: var(--color-space-900);
-    color: #ffffff;
+    background-color: var(--color-surface-50);
+    background-image:
+      radial-gradient(1200px 600px at 15% -10%, rgba(37, 99, 235, 0.08), transparent 60%),
+      radial-gradient(1000px 500px at 110% 10%, rgba(16, 185, 129, 0.07), transparent 55%),
+      linear-gradient(180deg, #f8fafc 0%, #eef2f9 100%);
+    color: #0f172a;
     font-family:
       "Inter",
       -apple-system,
@@ -41,50 +55,53 @@
 
   /* Scrollbar styling */
   ::-webkit-scrollbar {
-    width: 4px;
-    height: 4px;
+    width: 6px;
+    height: 6px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 2px;
+    background: rgba(15, 23, 42, 0.14);
+    border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(15, 23, 42, 0.24);
   }
 }
 
 @layer components {
   .glass-card {
     background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
     border: 1px solid var(--glass-border);
     border-radius: 1.25rem;
+    box-shadow: var(--glass-shadow);
   }
 
   .glass-input {
-    background: rgba(255, 255, 255, 0.06);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(15, 23, 42, 0.1);
     border-radius: 0.75rem;
-    color: white;
+    color: #0f172a;
     transition:
       border-color 0.2s,
-      background 0.2s;
+      background 0.2s,
+      box-shadow 0.2s;
   }
 
   .glass-input:focus {
     outline: none;
     border-color: var(--color-primary);
-    background: rgba(0, 102, 255, 0.08);
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
   }
 
   .glass-input::placeholder {
-    color: rgba(255, 255, 255, 0.35);
+    color: rgba(15, 23, 42, 0.4);
   }
 
   .btn-primary {
@@ -96,23 +113,26 @@
     color: white;
     border-radius: 0.75rem;
     font-weight: 600;
-    transition: opacity 0.2s, transform 0.1s;
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.28);
+    transition: box-shadow 0.2s, opacity 0.2s, transform 0.1s;
   }
 
   .btn-primary:hover {
-    opacity: 0.9;
+    box-shadow: 0 8px 22px rgba(37, 99, 235, 0.36);
+    opacity: 0.96;
   }
 
   .btn-primary:active {
     transform: scale(0.97);
   }
 
+  /* Soft shadows (replace neon glows) */
   .neon-glow-blue {
-    box-shadow: 0 0 20px rgba(0, 102, 255, 0.35);
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.18);
   }
 
   .neon-glow-green {
-    box-shadow: 0 0 20px rgba(0, 255, 136, 0.35);
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.18);
   }
 
   .pulse-dot {
@@ -120,8 +140,7 @@
   }
 
   .gradient-border {
-    background: linear-gradient(var(--color-space-800), var(--color-space-800))
-        padding-box,
+    background: linear-gradient(#ffffff, #ffffff) padding-box,
       linear-gradient(135deg, var(--color-primary), var(--color-accent))
         border-box;
     border: 1px solid transparent;
@@ -134,19 +153,19 @@
 
 @layer utilities {
   .bg-space-900 {
-    background-color: var(--color-space-900);
+    background-color: transparent;
   }
   .bg-space-800 {
-    background-color: var(--color-space-800);
+    background-color: var(--color-surface-100);
   }
   .bg-space-700 {
-    background-color: var(--color-space-700);
+    background-color: var(--color-surface-200);
   }
   .text-primary {
     color: var(--color-primary);
   }
   .text-accent {
-    color: var(--color-accent);
+    color: var(--color-accent-dark);
   }
   .border-primary {
     border-color: var(--color-primary);

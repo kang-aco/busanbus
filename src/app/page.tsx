@@ -69,33 +69,33 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col h-full bg-space-900 overflow-hidden">
-      <header className="flex-shrink-0 px-4 pt-safe-top pt-4 pb-3 border-b border-white/8">
+    <div className="flex flex-col h-full overflow-hidden">
+      <header className="flex-shrink-0 px-4 pt-safe-top pt-4 pb-3 border-b border-slate-900/8 bg-white/60 backdrop-blur-md">
         <div className="flex items-center justify-between max-w-2xl mx-auto">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#0066ff] flex items-center justify-center neon-glow-blue">
+            <div className="w-8 h-8 rounded-xl bg-[#2563eb] flex items-center justify-center neon-glow-blue">
               <Bus className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h1 className="text-base font-bold text-white leading-tight">부산 버스 라이브</h1>
+              <h1 className="text-base font-bold text-slate-900 leading-tight">부산 버스 라이브</h1>
               <p className="text-[10px] text-slate-500 leading-tight">실시간 버스 정보</p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-[#00ff88]">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#00ff88] pulse-dot" />
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 pulse-dot" />
             <span>LIVE</span>
           </div>
         </div>
       </header>
 
-      <div className="flex-shrink-0 border-b border-white/8">
+      <div className="flex-shrink-0 border-b border-slate-900/8 bg-white/40 backdrop-blur-md">
         <div className="flex max-w-2xl mx-auto">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-all relative ${
-                activeTab === tab.id ? "text-white" : "text-slate-500 hover:text-slate-300"
+                activeTab === tab.id ? "text-[#2563eb]" : "text-slate-500 hover:text-slate-700"
               }`}
               aria-current={activeTab === tab.id ? "page" : undefined}
             >
@@ -104,7 +104,7 @@ export default function Home() {
               {activeTab === tab.id && (
                 <motion.span
                   layoutId="tab-indicator"
-                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0066ff] rounded-full"
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#2563eb] rounded-full"
                 />
               )}
             </button>
@@ -146,11 +146,11 @@ export default function Home() {
                     <div className="flex flex-col gap-3">
                       <GlassCard className="flex items-center justify-between py-3" glowColor="blue">
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-lg bg-[#0066ff]/20 flex items-center justify-center">
-                            <Bus className="w-3.5 h-3.5 text-[#4d94ff]" />
+                          <div className="w-7 h-7 rounded-lg bg-[#2563eb]/12 flex items-center justify-center">
+                            <Bus className="w-3.5 h-3.5 text-[#2563eb]" />
                           </div>
                           <div>
-                            <span className="text-sm font-bold text-white">
+                            <span className="text-sm font-bold text-slate-900">
                               {routeDisplayNumber(selectedRoute.lineNo, selectedRoute.lineId)}번
                             </span>
                             {isFavorite(selectedRoute.lineId) && (
@@ -160,20 +160,20 @@ export default function Home() {
                         </div>
                         <div className="flex items-center gap-2">
                           {lastUpdated && !locationLoading && (
-                            <span className="text-[10px] text-slate-600 font-mono">
+                            <span className="text-[10px] text-slate-400 font-mono">
                               {formatTime(lastUpdated)}
                             </span>
                           )}
                           <button
                             onClick={() => toggleFavorite(selectedRoute.lineId)}
-                            className="p-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                            className="p-1.5 rounded-lg hover:bg-slate-900/5 transition-colors"
                             aria-label={isFavorite(selectedRoute.lineId) ? "즐겨찾기 해제" : "즐겨찾기 추가"}
                           >
                             <Star
                               className={`w-4 h-4 ${
                                 isFavorite(selectedRoute.lineId)
                                   ? "fill-amber-400 text-amber-400"
-                                  : "text-slate-500"
+                                  : "text-slate-400"
                               }`}
                             />
                           </button>
@@ -181,7 +181,7 @@ export default function Home() {
                             <button
                               onClick={refreshLocations}
                               disabled={locationLoading}
-                              className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-slate-400 hover:text-white"
+                              className="p-1.5 rounded-lg hover:bg-slate-900/5 transition-colors text-slate-500 hover:text-slate-800"
                               aria-label="위치 새로고침"
                             >
                               <RefreshCw className={`w-4 h-4 ${locationLoading ? "animate-spin" : ""}`} />
@@ -189,7 +189,7 @@ export default function Home() {
                           )}
                           <button
                             onClick={() => setSelectedRoute(null)}
-                            className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-slate-400 hover:text-white"
+                            className="p-1.5 rounded-lg hover:bg-slate-900/5 transition-colors text-slate-500 hover:text-slate-800"
                             aria-label="닫기"
                           >
                             <X className="w-4 h-4" />
@@ -198,7 +198,7 @@ export default function Home() {
                       </GlassCard>
 
                       {locationLoading && (
-                        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-[#0066ff]/10 border border-[#0066ff]/20 text-sm text-[#4d94ff]">
+                        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-[#2563eb]/8 border border-[#2563eb]/15 text-sm text-[#2563eb]">
                           <Loader2 className="w-4 h-4 animate-spin" />
                           버스 위치 정보를 불러오는 중...
                         </div>
@@ -228,7 +228,7 @@ export default function Home() {
                           <button
                             key={lineId}
                             onClick={() => handleSearch(routeDisplayNumber(undefined, lineId))}
-                            className="px-3 py-1.5 text-xs rounded-xl border border-amber-400/20 bg-amber-400/8 text-amber-300 hover:bg-amber-400/15 transition-all"
+                            className="px-3 py-1.5 text-xs font-medium rounded-xl border border-amber-300/50 bg-amber-50 text-amber-700 hover:bg-amber-100 transition-all"
                           >
                             {routeDisplayNumber(undefined, lineId)}번
                           </button>
@@ -238,11 +238,11 @@ export default function Home() {
                   )}
 
                   {routes.length === 0 && !loading && !error && favorites.length === 0 && (
-                    <div className="flex flex-col items-center gap-3 py-16 text-slate-600">
+                    <div className="flex flex-col items-center gap-3 py-16 text-slate-400">
                       <Bus className="w-12 h-12" />
                       <div className="text-center">
-                        <p className="text-sm font-medium text-slate-500">버스 번호를 검색하세요</p>
-                        <p className="text-xs text-slate-600 mt-1">예: 179, 1003, 63</p>
+                        <p className="text-sm font-medium text-slate-600">버스 번호를 검색하세요</p>
+                        <p className="text-xs text-slate-400 mt-1">예: 179, 1003, 63</p>
                       </div>
                     </div>
                   )}
@@ -259,14 +259,14 @@ export default function Home() {
                     <div className="flex flex-col gap-3">
                       <GlassCard className="flex items-center justify-between py-3" glowColor="green">
                         <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-lg bg-[#00ff88]/15 flex items-center justify-center">
-                            <MapPin className="w-3.5 h-3.5 text-[#00ff88]" />
+                          <div className="w-7 h-7 rounded-lg bg-emerald-500/12 flex items-center justify-center">
+                            <MapPin className="w-3.5 h-3.5 text-emerald-600" />
                           </div>
-                          <span className="text-sm font-semibold text-white">{selectedStop.name}</span>
+                          <span className="text-sm font-semibold text-slate-900">{selectedStop.name}</span>
                         </div>
                         <button
                           onClick={() => setSelectedStop(null)}
-                          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-slate-400 hover:text-white"
+                          className="p-1.5 rounded-lg hover:bg-slate-900/5 transition-colors text-slate-500 hover:text-slate-800"
                           aria-label="닫기"
                         >
                           <X className="w-4 h-4" />
@@ -274,7 +274,7 @@ export default function Home() {
                       </GlassCard>
 
                       {arrivalLoading && (
-                        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-[#00ff88]/10 border border-[#00ff88]/20 text-sm text-[#00ff88]">
+                        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-500/8 border border-emerald-500/15 text-sm text-emerald-700">
                           <Loader2 className="w-4 h-4 animate-spin" />
                           도착 정보 불러오는 중...
                         </div>

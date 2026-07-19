@@ -44,8 +44,8 @@ export default function RouteList({
             <div
               className={`flex items-center gap-3 rounded-2xl border p-4 transition-all cursor-pointer ${
                 isSelected
-                  ? "gradient-border bg-[#141b3d] neon-glow-blue"
-                  : "glass-card hover:bg-white/8 hover:border-white/20"
+                  ? "gradient-border bg-white neon-glow-blue"
+                  : "glass-card hover:bg-white hover:shadow-[0_12px_36px_rgba(15,23,42,0.12)]"
               }`}
               onClick={() => onSelect(route)}
               onKeyDown={(e) => {
@@ -61,14 +61,14 @@ export default function RouteList({
             >
               <div
                 className={`flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center ${
-                  isSelected ? "bg-[#0066ff]/30" : "bg-white/8"
+                  isSelected ? "bg-[#2563eb]/12" : "bg-slate-100"
                 }`}
               >
-                <Bus className={`w-5 h-5 ${isSelected ? "text-[#4d94ff]" : "text-slate-400"}`} />
+                <Bus className={`w-5 h-5 ${isSelected ? "text-[#2563eb]" : "text-slate-500"}`} />
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className={`text-base font-bold ${isSelected ? "text-white" : "text-slate-100"}`}>
+                <p className={`text-base font-bold ${isSelected ? "text-[#2563eb]" : "text-slate-900"}`}>
                   {route.lineNo}번
                 </p>
                 {route.terminalStart && route.terminalEnd ? (
@@ -76,13 +76,13 @@ export default function RouteList({
                     {route.terminalStart} → {route.terminalEnd}
                   </p>
                 ) : (
-                  <p className="text-xs text-slate-600 truncate">{route.lineId}</p>
+                  <p className="text-xs text-slate-400 truncate">{route.lineId}</p>
                 )}
               </div>
 
               <span
                 className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${
-                  isSelected ? "bg-[#0066ff]/20 text-[#4d94ff]" : "bg-white/8 text-slate-400"
+                  isSelected ? "bg-[#2563eb]/12 text-[#2563eb]" : "bg-slate-100 text-slate-500"
                 }`}
               >
                 {route.busType || "일반"}
@@ -94,12 +94,12 @@ export default function RouteList({
                     e.stopPropagation();
                     onToggleFavorite(route, favorite);
                   }}
-                  className="p-1 rounded-lg hover:bg-white/10 transition-colors flex-shrink-0"
+                  className="p-1 rounded-lg hover:bg-slate-900/5 transition-colors flex-shrink-0"
                   aria-label={favorite ? `${route.lineNo}번 즐겨찾기 해제` : `${route.lineNo}번 즐겨찾기 추가`}
                 >
                   <Star
                     className={`w-4 h-4 transition-colors ${
-                      favorite ? "fill-amber-400 text-amber-400" : "text-slate-600"
+                      favorite ? "fill-amber-400 text-amber-400" : "text-slate-400"
                     }`}
                   />
                 </button>

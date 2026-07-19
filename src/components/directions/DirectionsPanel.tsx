@@ -51,10 +51,10 @@ const NAVER_MODE: Record<TransportMode, string> = {
 };
 
 const STEP_MODE_COLORS: Record<string, string> = {
-  TRANSIT: "text-[#0066ff]",
-  WALKING: "text-slate-300",
-  DRIVING: "text-amber-400",
-  BICYCLING: "text-green-400",
+  TRANSIT: "text-[#2563eb]",
+  WALKING: "text-slate-500",
+  DRIVING: "text-amber-600",
+  BICYCLING: "text-emerald-600",
 };
 
 const STEP_MODE_ICONS: Record<string, ReactNode> = {
@@ -66,20 +66,21 @@ const STEP_MODE_ICONS: Record<string, ReactNode> = {
 
 const mapContainerStyle = { width: "100%", height: "260px", borderRadius: "0.75rem" };
 
-const darkMapStyles: google.maps.MapTypeStyle[] = [
-  { elementType: "geometry", stylers: [{ color: "#0d1117" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#0d1117" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#6e7681" }] },
-  { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#21262d" }] },
-  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#6e7681" }] },
-  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#161b22" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#21262d" }] },
-  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#30363d" }] },
-  { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#c9d1d9" }] },
-  { featureType: "transit", elementType: "geometry", stylers: [{ color: "#161b22" }] },
-  { featureType: "transit.station", elementType: "labels.text.fill", stylers: [{ color: "#388bfd" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#0d1117" }] },
-  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#388bfd" }] },
+const lightMapStyles: google.maps.MapTypeStyle[] = [
+  { elementType: "geometry", stylers: [{ color: "#f5f7fb" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#ffffff" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#6b7280" }] },
+  { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#e2e8f0" }] },
+  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#94a3b8" }] },
+  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#dcfce7" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
+  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#e5e9f0" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#fef3c7" }] },
+  { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#64748b" }] },
+  { featureType: "transit", elementType: "geometry", stylers: [{ color: "#e2e8f0" }] },
+  { featureType: "transit.station", elementType: "labels.text.fill", stylers: [{ color: "#2563eb" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#c7ddf5" }] },
+  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#2563eb" }] },
 ];
 
 const BUSAN_CENTER = { lat: 35.1796, lng: 129.0756 };
@@ -120,8 +121,8 @@ function ExternalMapLinks({
       <div className="flex items-start gap-2.5">
         <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
         <div>
-          <p className="text-sm font-medium text-amber-300">구글 지도 한국 경로 미지원</p>
-          <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
+          <p className="text-sm font-medium text-amber-700">구글 지도 한국 경로 미지원</p>
+          <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
             구글 지도 API는 한국 내 자동차·자전거·도보 경로를 지원하지 않습니다.
             카카오맵 또는 네이버 지도에서 확인해 주세요.
           </p>
@@ -243,7 +244,7 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
       <GlassCard className="gap-3 flex flex-col">
         <form onSubmit={handleSearch} className="flex flex-col gap-3">
           <div className="relative">
-            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#00ff88]" />
+            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600" />
             <input
               type="text"
               value={origin}
@@ -254,20 +255,20 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="flex-1 h-px bg-white/10" />
+            <div className="flex-1 h-px bg-slate-200" />
             <button
               type="button"
               onClick={handleSwap}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-900/5 transition-colors"
               aria-label="출발지와 도착지 바꾸기"
             >
               <ArrowLeftRight className="w-4 h-4" />
             </button>
-            <div className="flex-1 h-px bg-white/10" />
+            <div className="flex-1 h-px bg-slate-200" />
           </div>
 
           <div className="relative">
-            <Flag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#0066ff]" />
+            <Flag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#2563eb]" />
             <input
               type="text"
               value={destination}
@@ -277,7 +278,7 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
             />
           </div>
 
-          <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-white/5 border border-white/10">
+          <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-slate-100 border border-slate-200">
             {MODES.map((m) => (
               <button
                 key={m.id}
@@ -285,8 +286,8 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
                 onClick={() => setMode(m.id)}
                 className={`flex flex-col items-center gap-1 py-2 px-1 rounded-lg text-xs font-medium transition-all ${
                   mode === m.id
-                    ? "bg-[#0066ff] text-white shadow-lg"
-                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                    ? "bg-[#2563eb] text-white shadow-md"
+                    : "text-slate-500 hover:text-slate-900 hover:bg-white"
                 }`}
               >
                 {m.icon}
@@ -339,17 +340,17 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
           >
             <GlassCard glowColor="blue">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#0066ff]/20 text-[#4d94ff]">
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#2563eb]/12 text-[#2563eb]">
                   최적 경로
                 </span>
-                <div className="flex items-center gap-1 text-slate-400 text-xs">
+                <div className="flex items-center gap-1 text-slate-500 text-xs">
                   <Bus className="w-4 h-4" />
                   <span>대중교통</span>
                 </div>
               </div>
               <div className="flex items-baseline gap-3">
-                <span className="text-3xl font-bold text-white font-mono">{parsedRoute.duration}</span>
-                <span className="text-sm text-slate-400">{parsedRoute.distance}</span>
+                <span className="text-3xl font-bold text-slate-900 font-mono">{parsedRoute.duration}</span>
+                <span className="text-sm text-slate-500">{parsedRoute.distance}</span>
               </div>
             </GlassCard>
 
@@ -358,12 +359,12 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
                 mapContainerStyle={mapContainerStyle}
                 center={BUSAN_CENTER}
                 zoom={12}
-                options={{ styles: darkMapStyles, disableDefaultUI: true, zoomControl: true }}
+                options={{ styles: lightMapStyles, disableDefaultUI: true, zoomControl: true }}
               >
                 <DirectionsRenderer
                   directions={directions}
                   options={{
-                    polylineOptions: { strokeColor: "#0066ff", strokeWeight: 5, strokeOpacity: 0.85 },
+                    polylineOptions: { strokeColor: "#2563eb", strokeWeight: 5, strokeOpacity: 0.9 },
                     suppressMarkers: false,
                   }}
                 />
@@ -371,14 +372,14 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
             </GlassCard>
 
             <GlassCard className="gap-0 p-0 overflow-hidden">
-              <div className="px-4 py-3 border-b border-white/10">
-                <h3 className="text-sm font-semibold text-slate-300 flex items-center gap-2">
-                  <Navigation className="w-4 h-4 text-[#0066ff]" />
+              <div className="px-4 py-3 border-b border-slate-200">
+                <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                  <Navigation className="w-4 h-4 text-[#2563eb]" />
                   상세 경로
                 </h3>
               </div>
               <motion.div
-                className="flex flex-col divide-y divide-white/5"
+                className="flex flex-col divide-y divide-slate-100"
                 initial="hidden"
                 animate="show"
                 variants={{ hidden: {}, show: { transition: { staggerChildren: 0.06 } } }}
@@ -398,14 +399,14 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
                     <div className="flex-1 min-w-0">
                       {step.transitLine && (
                         <div className="mb-1">
-                          <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-[#0066ff]/20 text-[#4d94ff]">
+                          <span className="inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-[#2563eb]/12 text-[#2563eb]">
                             <Bus className="w-3 h-3" />
                             {step.transitLine}
                             {step.numStops ? ` (${step.numStops}정거장)` : ""}
                           </span>
                         </div>
                       )}
-                      <p className="text-sm text-slate-200 leading-snug">{step.instruction}</p>
+                      <p className="text-sm text-slate-700 leading-snug">{step.instruction}</p>
                       {step.departureStop && step.arrivalStop && (
                         <p className="text-xs text-slate-500 mt-0.5">
                           {step.departureStop}
@@ -418,9 +419,9 @@ function DirectionsPanelInner({ apiKey }: { apiKey: string }) {
                           <Clock className="w-3 h-3" />
                           {step.duration}
                         </span>
-                        <span className="text-xs text-slate-600">{step.distance}</span>
+                        <span className="text-xs text-slate-400">{step.distance}</span>
                         {step.departureTime && (
-                          <span className="text-xs text-[#00ff88]">{step.departureTime} 출발</span>
+                          <span className="text-xs font-medium text-emerald-600">{step.departureTime} 출발</span>
                         )}
                       </div>
                     </div>

@@ -4,8 +4,8 @@
   "description": "실시간 부산 버스 위치 및 도착 정보",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0A0E27",
-  "theme_color": "#0066FF",
+  "background_color": "#F6F8FC",
+  "theme_color": "#F6F8FC",
   "orientation": "portrait-primary",
   "icons": [
     {

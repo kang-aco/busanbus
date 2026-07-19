@@ -62,18 +62,18 @@ export default function RouteDetailPanel({
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#0066ff]/20 flex items-center justify-center">
-            <Bus className="w-4 h-4 text-[#4d94ff]" />
+          <div className="w-8 h-8 rounded-lg bg-[#2563eb]/12 flex items-center justify-center">
+            <Bus className="w-4 h-4 text-[#2563eb]" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-white">
+            <h3 className="text-sm font-bold text-slate-900">
               {routeDisplayNumber(route.lineNo, route.lineId)}번 실시간 위치
             </h3>
             <p className="text-xs text-slate-500">운행중 {locations.length}대</p>
           </div>
         </div>
         {locations.length > 0 && (
-          <div className="flex items-center gap-1.5 text-xs text-[#00ff88]">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600">
             <Radio className="w-3.5 h-3.5" />
             <span>실시간</span>
           </div>
@@ -95,7 +95,7 @@ export default function RouteDetailPanel({
                 <div className="relative flex flex-col items-center w-6 flex-shrink-0">
                   {/* 위쪽 연결선 */}
                   <div
-                    className={`w-0.5 flex-1 ${isFirst ? "bg-transparent" : "bg-white/15"}`}
+                    className={`w-0.5 flex-1 ${isFirst ? "bg-transparent" : "bg-slate-200"}`}
                     style={{ minHeight: 10 }}
                   />
                   {/* 노드 (버스가 있으면 버스 아이콘) */}
@@ -105,16 +105,16 @@ export default function RouteDetailPanel({
                       initial={{ scale: 0.6, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                      className="w-6 h-6 rounded-full bg-[#00ff88] flex items-center justify-center shadow-[0_0_10px_rgba(0,255,136,0.6)] z-10"
+                      className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center shadow-[0_2px_10px_rgba(16,185,129,0.45)] z-10"
                     >
                       <span className="text-[13px] leading-none">🚌</span>
                     </motion.div>
                   ) : (
-                    <div className="w-2.5 h-2.5 rounded-full bg-white/25 border border-white/30 z-10" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-slate-300 border border-slate-400/40 z-10" />
                   )}
                   {/* 아래쪽 연결선 */}
                   <div
-                    className={`w-0.5 flex-1 ${isLast ? "bg-transparent" : "bg-white/15"}`}
+                    className={`w-0.5 flex-1 ${isLast ? "bg-transparent" : "bg-slate-200"}`}
                     style={{ minHeight: 10 }}
                   />
                 </div>
@@ -123,20 +123,20 @@ export default function RouteDetailPanel({
                 <div
                   className={`flex-1 my-1 rounded-xl px-3 py-2 transition-colors ${
                     hasBus
-                      ? "bg-[#00ff88]/10 border border-[#00ff88]/30"
-                      : "bg-white/[0.02] border border-transparent"
+                      ? "bg-emerald-500/10 border border-emerald-500/30"
+                      : "bg-slate-900/[0.02] border border-transparent"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <p
                       className={`text-sm truncate ${
-                        hasBus ? "font-bold text-white" : "font-medium text-slate-300"
+                        hasBus ? "font-bold text-slate-900" : "font-medium text-slate-600"
                       }`}
                     >
                       {stop.name}
                     </p>
                     {stop.arsno && (
-                      <span className="text-[10px] text-slate-600 font-mono flex-shrink-0">
+                      <span className="text-[10px] text-slate-400 font-mono flex-shrink-0">
                         {stop.arsno}
                       </span>
                     )}
@@ -146,7 +146,7 @@ export default function RouteDetailPanel({
                       {busesHere.map((bus) => (
                         <span
                           key={bus.vehId}
-                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#00ff88]/15 text-[10px] text-[#00ff88] font-medium"
+                          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-[10px] text-emerald-700 font-medium"
                         >
                           <Bus className="w-2.5 h-2.5" />
                           {bus.plateNo || bus.vehId}
@@ -162,16 +162,16 @@ export default function RouteDetailPanel({
           {/* 노선상에 매칭되지 않은 운행 버스 */}
           {unmatchedBuses.length > 0 && (
             <div className="mt-2 flex flex-col gap-1.5">
-              <p className="text-[10px] text-slate-600 px-1">
+              <p className="text-[10px] text-slate-400 px-1">
                 위치 확인 중인 버스 {unmatchedBuses.length}대
               </p>
               {unmatchedBuses.map((bus) => (
                 <div
                   key={bus.vehId}
-                  className="flex items-center gap-2 rounded-lg bg-white/[0.03] px-2.5 py-1.5"
+                  className="flex items-center gap-2 rounded-lg bg-slate-900/[0.03] px-2.5 py-1.5"
                 >
                   <span className="text-sm">🚌</span>
-                  <span className="text-xs font-semibold text-white">
+                  <span className="text-xs font-semibold text-slate-900">
                     {bus.plateNo || bus.vehId}
                   </span>
                   <div className="flex items-center gap-1 text-[10px] text-slate-500">
@@ -193,7 +193,7 @@ export default function RouteDetailPanel({
           variants={{ hidden: {}, show: { transition: { staggerChildren: 0.07 } } }}
         >
           {locations.length === 0 ? (
-            <div className="glass-card border-dashed border-white/10 p-8 flex flex-col items-center gap-2 text-slate-600">
+            <div className="glass-card border-dashed border-slate-300 p-8 flex flex-col items-center gap-2 text-slate-400">
               <Bus className="w-8 h-8" />
               <p className="text-sm">현재 운행중인 버스가 없습니다.</p>
             </div>
@@ -210,23 +210,23 @@ export default function RouteDetailPanel({
               >
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-[#00ff88]/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <span className="text-lg leading-none">🚌</span>
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-white">{bus.plateNo || bus.vehId}</p>
+                      <p className="text-sm font-semibold text-slate-900">{bus.plateNo || bus.vehId}</p>
                       <div className="flex items-center gap-1 mt-0.5">
-                        <MapPin className="w-3 h-3 text-slate-500" />
-                        <p className="text-xs text-slate-400">{bus.nodeNm || "위치 정보 없음"}</p>
+                        <MapPin className="w-3 h-3 text-slate-400" />
+                        <p className="text-xs text-slate-500">{bus.nodeNm || "위치 정보 없음"}</p>
                       </div>
                     </div>
                   </div>
                   {bus.gpsX && bus.gpsY && (
                     <div className="text-right">
-                      <p className="text-xs font-mono text-slate-600">
+                      <p className="text-xs font-mono text-slate-400">
                         {parseFloat(bus.gpsY).toFixed(4)},
                       </p>
-                      <p className="text-xs font-mono text-slate-600">
+                      <p className="text-xs font-mono text-slate-400">
                         {parseFloat(bus.gpsX).toFixed(4)}
                       </p>
                     </div>

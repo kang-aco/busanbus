@@ -14,27 +14,27 @@ const mapContainerStyle = {
   borderRadius: "1rem",
 };
 
-const darkMapStyles: google.maps.MapTypeStyle[] = [
-  { elementType: "geometry", stylers: [{ color: "#0d1117" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#0d1117" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#6e7681" }] },
-  { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#21262d" }] },
-  { featureType: "administrative.country", elementType: "labels.text.fill", stylers: [{ color: "#8b949e" }] },
-  { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#8b949e" }] },
-  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#6e7681" }] },
-  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#161b22" }] },
-  { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#388bfd" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#21262d" }] },
-  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#161b22" }] },
-  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#8b949e" }] },
-  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#30363d" }] },
-  { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#21262d" }] },
-  { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#c9d1d9" }] },
-  { featureType: "transit", elementType: "geometry", stylers: [{ color: "#161b22" }] },
-  { featureType: "transit.station", elementType: "labels.text.fill", stylers: [{ color: "#388bfd" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#0d1117" }] },
-  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#388bfd" }] },
-  { featureType: "water", elementType: "labels.text.stroke", stylers: [{ color: "#0d1117" }] },
+const lightMapStyles: google.maps.MapTypeStyle[] = [
+  { elementType: "geometry", stylers: [{ color: "#f5f7fb" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#ffffff" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#64748b" }] },
+  { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#e2e8f0" }] },
+  { featureType: "administrative.country", elementType: "labels.text.fill", stylers: [{ color: "#475569" }] },
+  { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#475569" }] },
+  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#94a3b8" }] },
+  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#dcfce7" }] },
+  { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#16a34a" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
+  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#e5e9f0" }] },
+  { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#64748b" }] },
+  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#fef3c7" }] },
+  { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#fde68a" }] },
+  { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#64748b" }] },
+  { featureType: "transit", elementType: "geometry", stylers: [{ color: "#e2e8f0" }] },
+  { featureType: "transit.station", elementType: "labels.text.fill", stylers: [{ color: "#2563eb" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#c7ddf5" }] },
+  { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#2563eb" }] },
+  { featureType: "water", elementType: "labels.text.stroke", stylers: [{ color: "#ffffff" }] },
 ];
 
 const mapOptions: google.maps.MapOptions = {
@@ -43,12 +43,12 @@ const mapOptions: google.maps.MapOptions = {
   mapTypeControl: false,
   streetViewControl: false,
   fullscreenControl: false,
-  styles: darkMapStyles,
+  styles: lightMapStyles,
 };
 
 // 노선 타입별 색상 (부산 버스 유형 기준)
 function getRouteColor(lineId: string): string {
-  const colors = ["#0066ff", "#ff6b35", "#00c875", "#a855f7", "#f59e0b", "#ef4444", "#06b6d4"];
+  const colors = ["#2563eb", "#ea580c", "#059669", "#9333ea", "#d97706", "#dc2626", "#0891b2"];
   let hash = 0;
   for (let i = 0; i < lineId.length; i++) {
     hash = lineId.charCodeAt(i) + ((hash << 5) - hash);
@@ -76,7 +76,7 @@ function BusMapInner({ apiKey, mapId, locations, routeStops, lineId }: BusMapInn
     [locations]
   );
 
-  const routeColor = useMemo(() => (lineId ? getRouteColor(lineId) : "#0066ff"), [lineId]);
+  const routeColor = useMemo(() => (lineId ? getRouteColor(lineId) : "#2563eb"), [lineId]);
 
   const routePath = useMemo(
     () => routeStops.map((s) => ({ lat: s.lat, lng: s.lng })),
@@ -104,8 +104,8 @@ function BusMapInner({ apiKey, mapId, locations, routeStops, lineId }: BusMapInn
 
   if (loadError) {
     return (
-      <div className="glass-card p-4 border border-red-500/20 bg-red-500/5">
-        <p className="text-sm text-red-400">지도를 불러오는 중 오류가 발생했습니다.</p>
+      <div className="glass-card p-4 border border-red-200 bg-red-50">
+        <p className="text-sm text-red-600">지도를 불러오는 중 오류가 발생했습니다.</p>
       </div>
     );
   }
@@ -128,7 +128,7 @@ function BusMapInner({ apiKey, mapId, locations, routeStops, lineId }: BusMapInn
       {routeStops.length > 0 && (
         <div className="flex items-center gap-3 px-1 text-xs text-slate-400">
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full border-2" style={{ borderColor: "#00ff88", background: "#00ff88" }} />
+            <div className="w-3 h-3 rounded-full border-2" style={{ borderColor: "#10b981", background: "#10b981" }} />
             <span>운행 중 버스</span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -213,9 +213,9 @@ function BusMapInner({ apiKey, mapId, locations, routeStops, lineId }: BusMapInn
             icon={{
               path: google.maps.SymbolPath.CIRCLE,
               scale: 12,
-              fillColor: "#00ff88",
+              fillColor: "#10b981",
               fillOpacity: 1,
-              strokeColor: "#0a0e27",
+              strokeColor: "#ffffff",
               strokeWeight: 2,
             }}
             zIndex={5}
@@ -259,8 +259,8 @@ export default function BusMap({
 
   if (keyError) {
     return (
-      <div className="glass-card p-4 border border-red-500/20 bg-red-500/5">
-        <p className="text-sm text-red-400">{keyError}</p>
+      <div className="glass-card p-4 border border-red-200 bg-red-50">
+        <p className="text-sm text-red-600">{keyError}</p>
       </div>
     );
   }

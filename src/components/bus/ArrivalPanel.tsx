@@ -7,11 +7,11 @@ import type { BusArrival } from "@/lib/bus-api/types";
 // 노선 번호 앞자리로 버스 타입 색상 구분
 function getRouteColor(lineNo: string): { bg: string; text: string; border: string } {
   const n = parseInt(lineNo, 10);
-  if (isNaN(n))    return { bg: "bg-violet-500/15", text: "text-violet-300", border: "border-violet-500/30" };
-  if (n < 100)     return { bg: "bg-[#0066ff]/15",  text: "text-[#4d94ff]",  border: "border-[#0066ff]/30" };  // 간선
-  if (n < 200)     return { bg: "bg-emerald-500/15", text: "text-emerald-300", border: "border-emerald-500/30" }; // 지선
-  if (n < 1000)    return { bg: "bg-amber-500/15",   text: "text-amber-300",   border: "border-amber-500/30" };   // 마을
-  return               { bg: "bg-rose-500/15",    text: "text-rose-300",    border: "border-rose-500/30" };   // 급행
+  if (isNaN(n))    return { bg: "bg-violet-500/12", text: "text-violet-600", border: "border-violet-500/40" };
+  if (n < 100)     return { bg: "bg-[#2563eb]/12",  text: "text-[#2563eb]",  border: "border-[#2563eb]/40" };  // 간선
+  if (n < 200)     return { bg: "bg-emerald-500/12", text: "text-emerald-600", border: "border-emerald-500/40" }; // 지선
+  if (n < 1000)    return { bg: "bg-amber-500/12",   text: "text-amber-600",   border: "border-amber-500/40" };   // 마을
+  return               { bg: "bg-rose-500/12",    text: "text-rose-600",    border: "border-rose-500/40" };   // 급행
 }
 
 function ArrivalTime({ min, next = false }: { min: string; next?: boolean }) {
@@ -19,14 +19,14 @@ function ArrivalTime({ min, next = false }: { min: string; next?: boolean }) {
   if (next) {
     return (
       <p className="text-xs text-slate-500 mt-0.5">
-        다음 <span className="font-mono text-slate-400">{label}</span>
+        다음 <span className="font-mono text-slate-500">{label}</span>
       </p>
     );
   }
   return (
     <div className="flex items-center gap-1.5 justify-end">
-      <div className="w-2 h-2 rounded-full bg-[#00ff88] pulse-dot" />
-      <p className="text-sm font-bold text-[#00ff88] font-mono">{label}</p>
+      <div className="w-2 h-2 rounded-full bg-emerald-500 pulse-dot" />
+      <p className="text-sm font-bold text-emerald-600 font-mono">{label}</p>
     </div>
   );
 }
@@ -35,7 +35,7 @@ export default function ArrivalPanel({ arrivals }: { arrivals: BusArrival[] }) {
   return (
     <div role="list">
       {arrivals.length === 0 ? (
-        <div className="glass-card border-dashed border-white/10 p-8 flex flex-col items-center gap-2 text-slate-600">
+        <div className="glass-card border-dashed border-slate-300 p-8 flex flex-col items-center gap-2 text-slate-400">
           <Clock className="w-8 h-8" />
           <p className="text-sm">도착 예정 정보가 없습니다.</p>
         </div>
@@ -79,17 +79,17 @@ export default function ArrivalPanel({ arrivals }: { arrivals: BusArrival[] }) {
                       {/* 다음 정류소 */}
                       {item.nextStop && (
                         <div className="flex items-center gap-1 mt-0.5">
-                          <MapPin className="w-2.5 h-2.5 text-slate-500 flex-shrink-0" />
-                          <p className="text-xs text-slate-400 truncate">
+                          <MapPin className="w-2.5 h-2.5 text-slate-400 flex-shrink-0" />
+                          <p className="text-xs text-slate-500 truncate">
                             다음&nbsp;
-                            <span className="text-white font-medium">{item.nextStop}</span>
+                            <span className="text-slate-900 font-medium">{item.nextStop}</span>
                           </p>
                         </div>
                       )}
 
                       {/* 기점 → 종점 구간 */}
                       {item.terminalStart && item.terminalEnd && (
-                        <p className="text-[10px] text-slate-600 mt-0.5 flex items-center gap-0.5 truncate">
+                        <p className="text-[10px] text-slate-400 mt-0.5 flex items-center gap-0.5 truncate">
                           <ArrowRight className="w-2.5 h-2.5 flex-shrink-0" />
                           {item.terminalStart} → {item.terminalEnd}
                         </p>
@@ -102,7 +102,7 @@ export default function ArrivalPanel({ arrivals }: { arrivals: BusArrival[] }) {
                     {item.min1 ? (
                       <ArrivalTime min={item.min1} />
                     ) : (
-                      <p className="text-xs text-slate-600">정보없음</p>
+                      <p className="text-xs text-slate-400">정보없음</p>
                     )}
                     {item.min2 && <ArrivalTime min={item.min2} next />}
                   </div>

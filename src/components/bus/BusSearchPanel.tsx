@@ -92,7 +92,7 @@ export default function BusSearchPanel({ onSearch, loading, error }: BusSearchPa
             </div>
             <button
               onClick={clearRecentSearches}
-              className="flex items-center gap-1 text-xs text-slate-600 hover:text-slate-400 transition-colors"
+              className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition-colors"
             >
               <X className="w-3 h-3" />
               전체 삭제
@@ -103,7 +103,7 @@ export default function BusSearchPanel({ onSearch, loading, error }: BusSearchPa
               <button
                 key={idx}
                 onClick={() => handleRecentSearchClick(search)}
-                className="px-3 py-1 text-xs rounded-full border border-white/10 bg-white/5 text-slate-300 hover:bg-white/10 hover:text-white transition-all"
+                className="px-3 py-1 text-xs rounded-full border border-slate-200 bg-white/70 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all"
               >
                 {search}
               </button>

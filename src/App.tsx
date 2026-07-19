@@ -31,13 +31,13 @@ class ErrorBoundary extends Component<{ children: React.ReactNode }, { hasError:
         // Not a JSON error
       }
       return (
-        <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center bg-[#0a0e27]">
+        <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
           <div className="glass-card p-8 max-w-sm w-full flex flex-col items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-red-500/20 flex items-center justify-center text-2xl">
+            <div className="w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center text-2xl">
               🚌
             </div>
-            <h2 className="text-xl font-bold text-white">오류가 발생했습니다</h2>
-            <p className="text-sm text-slate-400">{errorMessage}</p>
+            <h2 className="text-xl font-bold text-slate-900">오류가 발생했습니다</h2>
+            <p className="text-sm text-slate-600">{errorMessage}</p>
             <button
               onClick={() => window.location.reload()}
               className="btn-primary w-full py-3 text-sm"
@@ -62,10 +62,11 @@ export default function App() {
           position="top-center"
           toastOptions={{
             style: {
-              background: "rgba(20, 27, 61, 0.95)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              color: "white",
-              backdropFilter: "blur(20px)",
+              background: "rgba(255, 255, 255, 0.92)",
+              border: "1px solid rgba(15, 23, 42, 0.08)",
+              color: "#0f172a",
+              boxShadow: "0 8px 30px rgba(15, 23, 42, 0.12)",
+              backdropFilter: "blur(16px)",
             },
           }}
         />

@@ -150,15 +150,15 @@ export default function StopSearchPanel({ onStopSelect }: StopSearchPanelProps) 
                   }}
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
-                  className="glass-card hover:bg-white/8 hover:border-white/20 text-left transition-colors group"
+                  className="glass-card hover:bg-white hover:shadow-[0_12px_36px_rgba(15,23,42,0.12)] text-left transition-all group"
                   aria-label={`${name} 정류소 선택${nextStop ? `, 다음 ${nextStop} 방면` : ""}`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-[#00ff88]/10 flex items-center justify-center flex-shrink-0 group-hover:bg-[#00ff88]/20 transition-colors">
-                      <MapPin className="w-4 h-4 text-[#00ff88]" />
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-500/20 transition-colors">
+                      <MapPin className="w-4 h-4 text-emerald-600" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-white truncate">{name}</p>
+                      <p className="text-sm font-semibold text-slate-900 truncate">{name}</p>
                       <div className="flex items-center gap-1.5 mt-0.5 min-w-0">
                         {label && (
                           <span className="text-[10px] text-slate-500 font-mono flex-shrink-0">
@@ -166,15 +166,15 @@ export default function StopSearchPanel({ onStopSelect }: StopSearchPanelProps) 
                           </span>
                         )}
                         {nextStop && (
-                          <span className="flex items-center gap-0.5 text-[10px] text-emerald-400 min-w-0">
+                          <span className="flex items-center gap-0.5 text-[10px] text-emerald-600 min-w-0">
                             <ArrowRight className="w-2.5 h-2.5 flex-shrink-0" />
                             <span className="truncate">{nextStop} 방면</span>
                           </span>
                         )}
                       </div>
                     </div>
-                    <div className="w-5 h-5 rounded-full bg-[#00ff88]/10 flex items-center justify-center flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <MapPin className="w-3 h-3 text-[#00ff88]" />
+                    <div className="w-5 h-5 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <MapPin className="w-3 h-3 text-emerald-600" />
                     </div>
                   </div>
                 </motion.button>
