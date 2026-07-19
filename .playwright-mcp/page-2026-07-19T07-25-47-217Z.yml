@@ -1,0 +1,22 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - banner [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e13]:
+          - heading "부산 버스 라이브" [level=1] [ref=e14]
+          - paragraph [ref=e15]: 실시간 버스 정보
+        - generic [ref=e16]: LIVE
+    - generic [ref=e20]:
+      - button "노선" [ref=e21]
+      - button "정류소" [ref=e28]
+      - button "길찾기" [ref=e33]
+    - main [ref=e37]:
+      - generic [ref=e40]:
+        - generic [ref=e43]:
+          - textbox "버스 번호 검색" [ref=e48]:
+            - /placeholder: "버스 번호 입력 (예: 179, 1003)"
+          - button "검색" [disabled] [ref=e49]
+        - generic [ref=e59]:
+          - paragraph [ref=e60]: 버스 번호를 검색하세요
+          - paragraph [ref=e61]: "예: 179, 1003, 63"
+  - region "Notifications alt+T"
