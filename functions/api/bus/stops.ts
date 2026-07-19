@@ -62,10 +62,14 @@ export async function onRequest(context: any) {
         return match ? match[1].trim() : "";
       };
 
+      // 정류소 이름: bstopnm 우선, 없으면 다른 태그명으로 폴백
+      const stopName =
+        getTag("bstopnm") || getTag("nodenm") || getTag("stnnm") || getTag("nodeNm");
+
       return {
-        stopId: getTag("bstopid"),
-        stopName: getTag("bstopnm"),
-        arsno: getTag("arsno"),
+        stopId: getTag("bstopid") || getTag("nodeid") || getTag("arsno"),
+        stopName,
+        arsno: getTag("arsno") || getTag("nodeno"),
         gpsX: getTag("gpsx") || getTag("lat"),
         gpsY: getTag("gpsy") || getTag("lin"),
       };

@@ -206,7 +206,7 @@ export default function Home() {
                       {locationError && <ErrorAlert message={locationError} />}
 
                       <GlassCard>
-                        <RouteDetailPanel route={selectedRoute} locations={busLocations} />
+                        <RouteDetailPanel route={selectedRoute} locations={busLocations} stops={routeStops} />
                       </GlassCard>
 
                       <BusMap

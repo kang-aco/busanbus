@@ -4,6 +4,8 @@ export interface RouteStop {
   seq: number;
   name: string;
   nodeId: string;
+  bstopid?: string;
+  arsno?: string;
   lat: number;
   lng: number;
 }
