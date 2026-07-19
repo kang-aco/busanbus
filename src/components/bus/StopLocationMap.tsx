@@ -4,19 +4,7 @@ import { useEffect, useState } from "react";
 import { GoogleMap, Marker, Polyline, useLoadScript } from "@react-google-maps/api";
 import { MapPin, Footprints, ExternalLink } from "lucide-react";
 
-const containerStyle = { width: "100%", height: "220px", borderRadius: "0.75rem" };
-
-const lightMapStyles: google.maps.MapTypeStyle[] = [
-  { elementType: "geometry", stylers: [{ color: "#f5f7fb" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#6b7280" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#ffffff" }] },
-  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#94a3b8" }] },
-  { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#dcfce7" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
-  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#e5e9f0" }] },
-  { featureType: "transit.station", elementType: "labels.text.fill", stylers: [{ color: "#2563eb" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#c7ddf5" }] },
-];
+const containerStyle = { width: "100%", height: "240px", borderRadius: "0.75rem" };
 
 interface Props {
   userLat: number | null;
@@ -40,11 +28,11 @@ function MapInner({
   const { isLoaded, loadError } = useLoadScript({ googleMapsApiKey: apiKey });
   const hasUser = typeof userLat === "number" && typeof userLng === "number";
 
-  // 도보 길안내 URL (길찾기 도보안내와 동일하게 외부 지도로 연결)
+  // 도보 길안내 URL — 한국 지도가 상세한 네이버·카카오로 연결
   const enc = encodeURIComponent;
-  const googleWalk = hasUser
-    ? `https://www.google.com/maps/dir/?api=1&origin=${userLat},${userLng}&destination=${stopLat},${stopLng}&travelmode=walking`
-    : `https://www.google.com/maps/search/?api=1&query=${stopLat},${stopLng}`;
+  const naverWalk = hasUser
+    ? `https://map.naver.com/p/directions/${userLng},${userLat},${enc("내 위치")},,/${stopLng},${stopLat},${enc(stopName)},,/-/walk`
+    : `https://map.naver.com/p/search/${enc(stopName)}`;
   const kakaoWalk = hasUser
     ? `https://map.kakao.com/link/from/내위치,${userLat},${userLng}/to/${enc(stopName)},${stopLat},${stopLng}`
     : `https://map.kakao.com/link/to/${enc(stopName)},${stopLat},${stopLng}`;
@@ -83,9 +71,12 @@ function MapInner({
         mapContainerStyle={containerStyle}
         onLoad={onLoad}
         options={{
-          styles: lightMapStyles,
-          disableDefaultUI: true,
+          disableDefaultUI: false,
           zoomControl: true,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
+          gestureHandling: "greedy",
           ...(mapId ? { mapId } : {}),
         }}
       >
@@ -138,26 +129,36 @@ function MapInner({
         />
       </GoogleMap>
 
-      <div className="flex items-center gap-2">
-        <a
-          href={googleWalk}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-semibold bg-[#2563eb] text-white hover:bg-[#1d4ed8] transition-colors"
-        >
-          <Footprints className="w-3.5 h-3.5" />
-          도보 길안내
-          {typeof dist === "number" && <span className="opacity-80">· {dist < 1000 ? `${dist}m` : `${(dist / 1000).toFixed(1)}km`}</span>}
-        </a>
-        <a
-          href={kakaoWalk}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-semibold bg-[#FEE500] text-[#3A1D1D] hover:bg-[#FFD700] transition-colors"
-        >
-          <ExternalLink className="w-3.5 h-3.5" />
-          카카오맵
-        </a>
+      <div className="flex flex-col gap-2">
+        <p className="text-[11px] text-slate-500 px-0.5 flex items-center gap-1">
+          <Footprints className="w-3 h-3" />
+          정류소까지 도보 길안내
+          {typeof dist === "number" && (
+            <span className="font-semibold text-slate-700">
+              · {dist < 1000 ? `${dist}m` : `${(dist / 1000).toFixed(1)}km`}
+            </span>
+          )}
+        </p>
+        <div className="flex items-center gap-2">
+          <a
+            href={naverWalk}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-semibold bg-[#03C75A] text-white hover:bg-[#02B350] transition-colors"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            네이버 지도 도보
+          </a>
+          <a
+            href={kakaoWalk}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-semibold bg-[#FEE500] text-[#3A1D1D] hover:bg-[#FFD700] transition-colors"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            카카오맵
+          </a>
+        </div>
       </div>
     </div>
   );
