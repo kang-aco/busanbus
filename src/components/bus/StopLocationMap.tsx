@@ -54,14 +54,19 @@ function MapInner({
   }
 
   const onLoad = (map: google.maps.Map) => {
-    const bounds = new google.maps.LatLngBounds();
-    bounds.extend({ lat: stopLat, lng: stopLng });
-    if (hasUser) bounds.extend({ lat: userLat as number, lng: userLng as number });
     if (hasUser) {
-      map.fitBounds(bounds, 64);
+      const bounds = new google.maps.LatLngBounds();
+      bounds.extend({ lat: stopLat, lng: stopLng });
+      bounds.extend({ lat: userLat as number, lng: userLng as number });
+      map.fitBounds(bounds, 70);
+      // 정류소가 매우 가까우면 과확대되어 주변이 안 보이므로 줌 상한을 둔다
+      google.maps.event.addListenerOnce(map, "idle", () => {
+        const z = map.getZoom() ?? 17;
+        if (z > 17) map.setZoom(17);
+      });
     } else {
       map.setCenter({ lat: stopLat, lng: stopLng });
-      map.setZoom(16);
+      map.setZoom(17);
     }
   };
 
