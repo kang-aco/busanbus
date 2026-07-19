@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { motion } from "motion/react";
 import { LocateFixed, MapPin, Loader2, X, RefreshCw, Navigation, Ban } from "lucide-react";
 import ArrivalPanel from "@/components/bus/ArrivalPanel";
+import StopLocationMap from "@/components/bus/StopLocationMap";
 import ErrorAlert from "@/components/ui/ErrorAlert";
 import GlassCard from "@/components/ui/GlassCard";
 import { useBusArrivals } from "@/hooks/useBusArrivals";
@@ -22,6 +23,9 @@ interface SelectedStop {
   id: string;
   name: string;
   nearbyIds: string[];
+  lat: number;
+  lng: number;
+  dist: number;
 }
 
 type GeoStatus = "idle" | "locating" | "denied" | "unavailable" | "error";
@@ -32,6 +36,7 @@ function formatDist(m: number): string {
 
 export default function NearbyPanel() {
   const [stops, setStops] = useState<NearbyStop[]>([]);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [geoStatus, setGeoStatus] = useState<GeoStatus>("idle");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +74,7 @@ export default function NearbyPanel() {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setGeoStatus("idle");
+        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         fetchStops(pos.coords.latitude, pos.coords.longitude);
       },
       (err) => {
@@ -88,6 +94,9 @@ export default function NearbyPanel() {
       id: stop.stopId,
       name: stop.stopName,
       nearbyIds: nearbyStopIds(stop, stops),
+      lat: parseFloat(stop.gpsY),
+      lng: parseFloat(stop.gpsX),
+      dist: stop.dist,
     });
   };
 
@@ -219,6 +228,18 @@ export default function NearbyPanel() {
               <X className="w-4 h-4" />
             </button>
           </GlassCard>
+
+          {/* 정류소 위치 지도 + 도보 길안내 */}
+          {!isNaN(selected.lat) && !isNaN(selected.lng) && (
+            <StopLocationMap
+              userLat={coords?.lat ?? null}
+              userLng={coords?.lng ?? null}
+              stopLat={selected.lat}
+              stopLng={selected.lng}
+              stopName={selected.name}
+              dist={selected.dist}
+            />
+          )}
 
           {arrivalLoading && arrivals.length === 0 && (
             <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-[#00ff88]/10 border border-emerald-500/20 text-sm text-emerald-700">
