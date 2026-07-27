@@ -1,14 +1,15 @@
 {
-  "name": "부산버스 - 실시간 버스 정보",
+  "name": "부산 버스 라이브",
   "short_name": "부산버스",
-  "description": "부산 시내버스 실시간 운행정보, 정류소 도착시간, 길찾기",
+  "description": "실시간 부산 버스 위치 및 도착 정보",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#ffffff",
-  "theme_color": "#1976d2",
+  "background_color": "#f6f8fc",
+  "theme_color": "#f6f8fc",
   "lang": "ko",
+  "dir": "ltr",
   "icons": [
     {
       "src": "/icon-192.png",
