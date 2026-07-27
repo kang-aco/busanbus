@@ -9,6 +9,9 @@ coverage/
 #firebase-applet-config.json
 firebase-blueprint.json
 
+# Claude Code
+.claude/
+
 # Playwright MCP artifacts
 .playwright-mcp/
 route-detail-verify.png
