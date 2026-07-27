@@ -2,11 +2,19 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#f6f8fc" />
     <meta name="description" content="실시간 부산 버스 위치 및 도착 정보" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="/manifest.json" />
+
+    <!-- 아이폰(사파리)에서 홈 화면에 추가할 때 쓰이는 설정 -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="부산버스" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+
     <title>부산 버스 라이브</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -18,5 +26,25 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <!-- 서비스 워커 등록: 이게 있어야 안드로이드 크롬에 "앱 설치"가 뜹니다 -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          // 개발 중(npm run dev)에는 캐시 때문에 헷갈리므로 등록하지 않습니다
+          if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+            return;
+          }
+          navigator.serviceWorker
+            .register('/sw.js')
+            .then(function () {
+              console.log('[PWA] 서비스 워커 등록 성공');
+            })
+            .catch(function (err) {
+              console.log('[PWA] 서비스 워커 등록 실패:', err);
+            });
+        });
+      }
+    </script>
   </body>
 </html>
